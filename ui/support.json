@@ -1,0 +1,14 @@
+{
+  "_": "The app's official links (public; Donations and Bug report show them). Empty: not shown. donate: the user names on each platform, the same keys as GitHub's .github/FUNDING.yml; custom: up to four https:// links as { \"name\": \"...\", \"url\": \"https://...\" }. repo: the official GitHub repository, as https://github.com/<owner>/<repo> (bug reports, downloads, known issues).",
+  "repo": "https://github.com/Nrnis/Grimcold",
+  "donate": {
+    "github": "",
+    "ko_fi": "",
+    "liberapay": "",
+    "open_collective": "",
+    "patreon": "",
+    "buy_me_a_coffee": "",
+    "polar": "",
+    "custom": []
+  }
+}

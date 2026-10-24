@@ -1,0 +1,7 @@
+blank_issues_enabled: false
+# Questions go to the repository's Discussions (switch them on in the repository's settings, then
+# put its address below and remove the comment marks).
+# contact_links:
+#   - name: Questions and ideas
+#     url: https://github.com/OWNER/REPO/discussions
+#     about: Ask here; the issue tracker is for bugs.

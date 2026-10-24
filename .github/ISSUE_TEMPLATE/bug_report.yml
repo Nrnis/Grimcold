@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in Grimcold does not work or looks wrong
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. Please look at the [known issues](../blob/main/KNOWN_ISSUES.md) first.
+        In the app, **Bug report → Open the bug report form** fills in the version and the details for you.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in the details (Bug report → Show details).
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - 3D Viewer
+        - Vehicle Builder
+        - Maps
+        - Export (a file the app wrote)
+        - Somewhere else
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead. A screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Maps
+        2. Pick tower, weather dull rain
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Details
+      description: Filled in by the app (Bug report → Copy details). No files, names or emails.
+    validations:
+      required: true
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Before you send
+      options:
+        - label: I searched the existing issues and the known issues.
+          required: true

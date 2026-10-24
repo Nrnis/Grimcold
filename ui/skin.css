@@ -1,0 +1,878 @@
+/* =================================================================================================
+   The game's look: Crossout's own interface over the app's controls and panels.
+   Loaded after app.css (which keeps the layout). With the game read, <html class="skin"> and the
+   game's own UI sprites are in CSS variables (skin.js: --sp-btn, --sp-tab-select, --sp-arrow-…);
+   without it the same shapes are drawn in CSS. Sizes stay those of app.css: the JS and the e2e
+   measure them (toolbar heights, the minimap canvas, the hover tip's position).
+   The game's (sampled from its UI textures and from screenshots of it):
+   - the main hangar's tabs (the modes), its orange slanted buttons (Test drive; Add to garage for
+     a card's main act), the classic button with orange ears at its sides and the flat button, the
+     dialog window's orange header with its hatching, the diamond scroll thumb (the sliders'
+     handle), the 2026 filter's arrow tabs (segmented choices), the tertiary button;
+   - its colours: near-black blue-charcoal panels, one orange (#FF6600; #CB6600 at rest), cream
+     glowing edges (#FFFFCE), the market's slate search field (#29313A, its grey line under it), the
+     menu's row gradients (grey fade with a dark bar under the mouse, orange fade with an orange bar
+     when picked), its light grey scroll bar, its tooltip (black, a pale frame, a white corner tab);
+   - its type (TT Fellows, a paid humanist face: Segoe UI Variable stands in), sentence case,
+     semibold white for what is active, grey for the rest, numbers right-aligned.
+   Invented to fit: the panels' header bands (the window header's hatching, darkened), the striped
+   progress bars, the sliders' orange fill, the record button's blinking diamond, the done rows'
+   teal (the game's "applied" list colour).
+   ================================================================================================= */
+:root {
+  --xo-font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --xo-font-ui: "Segoe UI Variable Display", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+  --xo-bg: #0b0e12;          /* the garage's backdrop (#090B0F-#0D1116) */
+  --xo-panel: #0f1318;       /* side panels */
+  --xo-panel2: #181c22;      /* a card on a panel (#1B1E24) */
+  --xo-glass: rgba(0, 0, 0, .75); /* the buttons' fill */
+  --xo-line: #1b1f24;        /* rules between rows (#17191D) */
+  --xo-line2: #2b323b;       /* frames of plates */
+  --xo-frame: rgba(148, 146, 148, .87); /* the buttons' grey frame (#949294) */
+  --xo-orange: #cb6600;      /* the game's orange at rest (button ears, bars) */
+  --xo-orange-hi: #ff6600;   /* lit */
+  --xo-orange-sel: #d16606;  /* the picked menu row's bar */
+  --xo-glow: #ff9013;        /* its halo */
+  --xo-cream: #ffffce;       /* glowing edges, pressed frames, the picked tab's underline */
+  --xo-field: #29313a;       /* the market's search field */
+  --xo-field-hi: #2f3842;
+  --xo-field-line: #7b8188;
+  --xo-tile: #2b323b;        /* flat tiles (the market's filters) */
+  --xo-tile-hi: #353d47;
+  --xo-text: #ffffff;
+  --xo-text2: #b7b8ba;       /* inactive labels */
+  --xo-text3: #c9cccd;       /* body text on plates */
+  --xo-faint: #7f878f;       /* captions, file names, counts */
+  --xo-apply: #00c9a4;       /* the game's "applied" list colour */
+  --xo-hover-row: linear-gradient(#484b4e, #484b4e) 0 0 / 3px 100% no-repeat, linear-gradient(90deg, rgba(255, 255, 255, .25) 0%, rgba(255, 255, 255, .19) 22%, rgba(255, 255, 255, .11) 55%, rgba(255, 255, 255, .05) 77%, rgba(255, 255, 255, 0) 100%) 5px 0 / calc(100% - 5px) 100% no-repeat;
+  --xo-sel-row: linear-gradient(#ff7a1a, #ff7a1a) 0 0 / 3px 100% no-repeat, linear-gradient(90deg, rgba(209, 102, 6, 1) 0%, rgba(209, 102, 6, .84) 16%, rgba(209, 102, 6, .66) 33%, rgba(209, 102, 6, .45) 55%, rgba(209, 102, 6, .22) 77%, rgba(209, 102, 6, 0) 96%) 5px 0 / calc(100% - 5px) 100% no-repeat;
+  --xo-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23b7b8ba' stroke-width='1.6'/%3E%3C/svg%3E");
+  /* app.css's own tokens, moved onto the game's colours */
+  --bg: var(--xo-bg); --panel: var(--xo-panel); --panel2: var(--xo-panel2); --line: var(--xo-line);
+  --text: #eef0f2; --dim: var(--xo-text2); --faint: var(--xo-faint);
+  --accent: #ff7a1a; --accent2: #ffb266; --radius: 0;
+  --warn: #ffa116; --ok: #63ef94; --err: #f23f4a;
+}
+html, body { font-family: var(--xo-font); font-size: 13px; }
+body { background: var(--xo-bg); }
+button, input, select, textarea { font-family: var(--xo-font-ui); }
+code { border-radius: 0; background: rgba(255, 255, 255, .06); border: 0; box-shadow: inset 2px 0 0 #4a525b; color: #e3e5e7; padding: 1px 6px; }
+::selection { background: rgba(255, 102, 0, .35); color: #fff; }
+:focus-visible { outline: 1px solid var(--xo-cream); outline-offset: 1px; }
+b, strong { font-weight: 600; }
+input, textarea { caret-color: var(--xo-glow); }
+
+/* ---- the game's scroll bar: an 8px light grey bar, square ---- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, .03); }
+::-webkit-scrollbar-thumb { background: rgba(147, 149, 153, .5); border: 1px solid #0d1116; border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: #939599; }
+::-webkit-scrollbar-thumb:active { background: #fff; }
+::-webkit-scrollbar-corner { background: transparent; }
+.cats { scrollbar-color: rgba(147, 149, 153, .5) transparent; }
+
+/* ---- the parts menu and the cards in the game's face ---- */
+.cats { font-family: var(--xo-font-ui); }
+.cat-row .cat { font-size: 15px; font-weight: 600; color: var(--xo-text2); letter-spacing: 0; }
+.cat-subs .sub { font-weight: 600; font-size: 13.5px; }
+.card .name { font-family: var(--xo-font-ui); font-weight: 600; letter-spacing: 0; }
+
+/* ---- the top bar: the garage's header, the modes as its tabs ---- */
+#topbar {
+  background: linear-gradient(180deg, #121720 0%, #0b0e13 100%);
+  border-bottom: 1px solid #000; box-shadow: inset 0 -1px 0 #232431, 0 2px 8px rgba(0, 0, 0, .45);
+  position: relative; z-index: 6; gap: 12px;
+}
+#topbar .title { font-family: var(--xo-font-ui); font-weight: 700; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: #fff; }
+#topbar .title::after { content: ''; display: inline-block; width: 24px; height: 8px; margin-left: 10px; vertical-align: 1px; background: var(--xo-orange-hi);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8'%3E%3Cpath d='M4.6 0H6.6L2 8H0ZM10.4 0H12.4L7.8 8H5.8ZM16.2 0H18.2L13.6 8H11.6ZM22 0H24L19.4 8H17.4Z'/%3E%3C/svg%3E") 0 0 / 24px 8px no-repeat; }
+/* the game folder: a field, as the market's search box */
+.game { border-radius: 0; border: 0; border-bottom: 2px solid var(--xo-field-line); background: var(--xo-field); padding: 4px 10px 3px; font-size: 12.5px; color: var(--xo-text3); font-weight: 400; font-family: var(--xo-font); }
+.game:hover { border-bottom-color: #c5c9ce; color: #fff; background: var(--xo-field-hi); }
+.dot { border-radius: 0; transform: rotate(45deg); width: 7px; height: 7px; }
+.dot.ok { background: #63ef94; box-shadow: 0 0 5px rgba(99, 239, 148, .6); }
+.dot.err { background: #f23f4a; box-shadow: 0 0 5px rgba(242, 63, 74, .6); }
+/* the version: an accent chip with a cut corner */
+.ver-tag { border-radius: 0; background: rgba(255, 102, 0, .16); border: 0; box-shadow: inset 2px 0 0 var(--xo-orange-hi); color: #ffb266; font-family: var(--xo-font-ui); font-weight: 600; letter-spacing: .02em; padding: 2px 9px 2px 10px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+.ver-tag.unknown { border-radius: 0; background: var(--xo-tile); box-shadow: none; color: var(--xo-text2); }
+.icon-btn { border-radius: 0; color: var(--xo-text2); }
+.icon-btn:hover { color: #fff; border-color: rgba(255, 255, 255, .4); background: rgba(255, 255, 255, .06); }
+.icon-btn:active { border-color: var(--xo-cream); color: var(--xo-cream); }
+.icon-btn .gi { font-size: 17px; vertical-align: -3px; }
+
+/* the modes: the main hangar's tabs (dark slate, a steel-blue line under them; under the mouse a
+   warm light from above; the one open lit orange from above, its underline cream with orange edges) */
+.mainmode { align-self: stretch; background: none; border: 0; border-radius: 0; padding: 0; gap: 0; }
+.mainmode button {
+  position: relative; min-width: 156px; padding: 0 24px; border-radius: 0; color: var(--xo-text2);
+  font-size: 15px; font-weight: 600; letter-spacing: 0;
+  background: linear-gradient(180deg, #181d24, #12161b); box-shadow: inset 0 2px 0 #232431, inset 0 -3px 0 #293c5a;
+}
+.mainmode button + button::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 1px; background: linear-gradient(180deg, transparent, #34404e, transparent); }
+.mainmode button:not(.on):hover { color: #fff; background: radial-gradient(ellipse 60% 85% at 50% 0%, rgba(255, 214, 160, .38), rgba(255, 214, 160, 0) 75%), linear-gradient(180deg, #1b2027, #12161b); }
+.mainmode button.on { color: #fff; background: radial-gradient(ellipse 62% 95% at 50% 0%, rgba(247, 247, 173, .85), rgba(222, 120, 30, .5) 40%, rgba(222, 120, 30, 0) 80%), linear-gradient(180deg, #2a2017, #15130f); box-shadow: inset 0 -1px 0 #e76d18, inset 0 -3px 0 var(--xo-cream), inset 0 -4px 0 #a25221; text-shadow: 0 0 8px rgba(255, 144, 19, .45), 0 1px 3px rgba(0, 0, 0, .9); }
+html.skin .mainmode button { background: none; box-shadow: none; border: 0 solid transparent; border-image: var(--sp-tab) 0 0 8 0 fill / 0 0 3px 0 stretch; }
+html.skin .mainmode button:not(.on):hover { background: none; border-image-source: var(--sp-tab-hover); }
+html.skin .mainmode button.on { background: none; box-shadow: none; border-image-source: var(--sp-tab-select); }
+/* the tabs' steel line carried out of the block, fading (no pasted-in box) */
+.mainmode { position: relative; }
+.mainmode::before, .mainmode::after { content: ''; position: absolute; bottom: 0; width: 140px; height: 3px; pointer-events: none; }
+html.skin .mainmode::before, html.skin .mainmode::after { height: 2px; bottom: 1px; }
+.mainmode::before { right: 100%; background: linear-gradient(90deg, rgba(41, 60, 90, 0), #293c5a); }
+.mainmode::after { left: 100%; background: linear-gradient(90deg, #293c5a, rgba(41, 60, 90, 0)); }
+/* narrower windows (down to the narrowest, 900 px): the tabs give up their spare width first, then the
+   version chip goes (the status bar shows the version too), then the app's name (the logo stays), so
+   the window's own buttons always stay on screen */
+.winbtns { flex: none; }
+.mainmode { min-width: 0; }
+@media (max-width: 1480px) { .mainmode button { min-width: 0; padding: 0 16px; } }
+@media (max-width: 1240px) { #gameVer { display: none; } .mainmode button { padding: 0 12px; } }
+@media (max-width: 1040px) { #topbar .title { display: none; } .mainmode button { padding: 0 10px; font-size: 14px; } }
+
+/* ---- panels ---- */
+#left, #right { background: var(--xo-panel); }
+#left { border-right: 1px solid #000; }
+#right { border-left: 1px solid #000; box-shadow: inset 1px 0 0 #1b2026; background: linear-gradient(160deg, #0f1318 0%, #11161b 45%, #161a20 100%); }
+#status { background: #090b0f; border-top: 1px solid #000; box-shadow: inset 0 1px 0 #17191d; color: #8c939b; font-size: 12px; }
+#statusText.err { color: #ff5a4a; }
+#statusRight { color: var(--xo-text2); font-variant-numeric: tabular-nums; }
+
+/* Parts / All files: the hangar's second-level tabs (its bookmarks: dark, the open one steel blue
+   from below), quiet beside the modes' and the menu's orange */
+.modes { margin: 10px 10px 0; background: none; border: 0; border-radius: 0; padding: 0; gap: 0; }
+.modes button { position: relative; padding: 7px 0 8px; border-radius: 0; color: var(--xo-text2); font-size: 13.5px; font-weight: 600; background: linear-gradient(180deg, #1c1d22, #1b1b1e); box-shadow: inset 0 -2px 0 #1f2228; }
+.modes button + button { border-left: 1px solid #0b0d10; }
+.modes button:not(.on):hover { color: #fff; background: linear-gradient(180deg, #1e2228, #262c35); }
+.modes button.on { color: #fff; background: linear-gradient(180deg, #1a1e24, #243244); box-shadow: inset 0 -2px 0 #3a5a86; }
+html.skin .modes button { background: var(--sp-bookmark) center / 100% 100% no-repeat; box-shadow: none; }
+html.skin .modes button:not(.on):hover { background: linear-gradient(180deg, rgba(255, 255, 255, .04), rgba(255, 255, 255, .08)), var(--sp-bookmark) center / 100% 100% no-repeat; }
+html.skin .modes button.on { background: var(--sp-bookmark-select) center / 100% 100% no-repeat; box-shadow: inset 0 -2px 0 #3a5a86; }
+
+/* ---- fields: the market's search box (slate, a grey line under it; lighter under the mouse;
+   cream while typing) ---- */
+input[type=text], input[type=number], input[type=search], textarea, .name-edit, .xyz input, .ck-edit textarea {
+  border-radius: 0; border: 0; border-bottom: 2px solid var(--xo-field-line); background-color: var(--xo-field); color: #fff; font-family: var(--xo-font);
+}
+input[type=text]:hover, input[type=number]:hover, input[type=search]:hover, textarea:hover, .xyz input:hover, .ck-edit textarea:hover { border-bottom-color: #c5c9ce; }
+input[type=text]:focus, input[type=number]:focus, input[type=search]:focus, textarea:focus, .name-edit:focus, .xyz input:focus, .ck-edit textarea:focus { background-color: var(--xo-field-hi); border-bottom-color: var(--xo-cream); outline: none; }
+input::placeholder, textarea::placeholder { color: #8a9097; }
+.search-row { border-bottom-color: var(--xo-line); }
+#search, #mapSearch { border-radius: 0; border: 0; border-bottom: 2px solid var(--xo-field-line); background-color: var(--xo-field); padding: 8px 10px 7px 31px; }
+#search:hover, #mapSearch:hover { border-bottom-color: #c5c9ce; }
+#search:focus, #mapSearch:focus { border-bottom-color: var(--xo-cream); background-color: var(--xo-field-hi); box-shadow: none; }
+.name-input { font-family: var(--xo-font-ui); font-size: 18px; font-weight: 600; border: 0; border-bottom: 2px solid transparent; background: transparent; }
+.name-input:hover { background: var(--xo-field); border-bottom-color: var(--xo-field-line); }
+.name-input:focus { background: var(--xo-field-hi); border-bottom-color: var(--xo-cream); }
+.name-edit { border-bottom-color: var(--xo-cream); background: var(--xo-field-hi); }
+.list-hint { background: linear-gradient(90deg, rgba(209, 102, 6, .3), rgba(209, 102, 6, 0) 80%); color: #ffc58a; border-bottom: 1px solid var(--xo-line); box-shadow: inset 3px 0 0 #ff7a1a; }
+
+/* drop-downs: the same field, the game's chevron at its end */
+select, .view-tools select, .inspector select, .tex-head select, .line select {
+  -webkit-appearance: none; appearance: none; border-radius: 0; cursor: pointer; color: #fff; font-weight: 400; font-family: var(--xo-font);
+  background: var(--xo-field) var(--xo-chevron) no-repeat right 8px center; border: 0; border-bottom: 2px solid var(--xo-field-line);
+  padding: 3px 26px 2px 8px;
+}
+select:hover, .view-tools select:hover, .inspector select:hover, .tex-head select:hover { border-bottom-color: #c5c9ce; }
+select:focus { border-bottom-color: var(--xo-cream); background-color: var(--xo-field-hi); outline: none; }
+select:disabled { background-color: #20262d; border-bottom-color: #3d434a; color: #5d636b; cursor: default; }
+option { background: #12161b; color: #fff; }
+input[type=color] { border-radius: 0 !important; border: 0 !important; border-bottom: 2px solid var(--xo-field-line) !important; background: var(--xo-field) !important; cursor: pointer; }
+
+/* ---- check boxes: the 2026 settings check box (a slate square; a pale frame under the mouse;
+   ticked: dark, a cream frame, the tick orange) ---- */
+input[type=checkbox] {
+  appearance: none; -webkit-appearance: none; flex: none; width: 15px; height: 15px; margin: 0; position: relative; cursor: pointer;
+  background: #2f3740; border: 0; border-radius: 0; vertical-align: -3px;
+}
+input[type=checkbox]:hover { box-shadow: inset 0 0 0 2px rgba(178, 174, 168, .7); }
+input[type=checkbox]:active { box-shadow: inset 0 0 0 2px #fff; background: #3a434d; }
+input[type=checkbox]:checked { background: rgba(13, 17, 22, .8); box-shadow: inset 0 0 0 2px var(--xo-cream); }
+input[type=checkbox]:checked:hover { box-shadow: inset 0 0 0 2px #fff; }
+input[type=checkbox]:checked::after { content: ''; position: absolute; left: 5px; top: 2px; width: 3px; height: 7px; border: solid var(--xo-glow); border-width: 0 2px 2px 0; transform: rotate(45deg); filter: drop-shadow(0 0 2px rgba(255, 144, 19, .7)); }
+input[type=checkbox]:disabled { opacity: .35; cursor: default; }
+input[type=checkbox]:focus-visible { outline: 0; box-shadow: inset 0 0 0 2px var(--xo-cream), 0 0 0 2px rgba(255, 144, 19, .5); }
+.view-tools label, .chk { color: var(--xo-text2); }
+.chk:hover { color: #fff; }
+.chk:has(input:checked) { color: #fff; }
+
+/* ---- sliders: a thin rail filled orange up to the handle (skin.js keeps --p), the handle the
+   game's diamond (its scroll thumb) ---- */
+input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 18px; cursor: pointer; accent-color: auto; }
+input[type=range]::-webkit-slider-runnable-track {
+  height: 4px; border: 0;
+  background: linear-gradient(90deg, #cb6600, #ff6600) 0 0 / var(--p, 50%) 100% no-repeat, rgba(255, 255, 255, .14);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, .6);
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 11px; height: 11px; margin-top: -3.5px; border: 2px solid var(--xo-cream); background: #ff7a1a;
+  transform: rotate(45deg); box-shadow: 0 0 0 1px rgba(0, 0, 0, .7), 0 0 6px rgba(255, 144, 19, .55);
+}
+input[type=range]:hover::-webkit-slider-thumb { background: #ff9a3a; box-shadow: 0 0 0 1px rgba(0, 0, 0, .7), 0 0 9px rgba(255, 144, 19, .85); }
+input[type=range]:active::-webkit-slider-thumb { background: #ffd08a; }
+input[type=range]:disabled { opacity: .4; }
+html.skin input[type=range]::-webkit-slider-thumb { width: 18px; height: 18px; margin-top: -7px; border: 0; transform: none; background: var(--sp-thumb) center / 100% 100% no-repeat; box-shadow: none; filter: drop-shadow(0 0 2px rgba(0, 0, 0, .9)); }
+html.skin input[type=range]:hover::-webkit-slider-thumb { background-image: var(--sp-thumb-hover); filter: drop-shadow(0 0 4px rgba(255, 144, 19, .9)); }
+
+/* ---- buttons: the game's classic button (black glass, a grey frame, orange ears at its sides;
+   under the mouse orange with a white frame; pressed bright orange, glowing) ---- */
+.btn {
+  border-radius: 0; color: #fff; font-family: var(--xo-font-ui); font-weight: 600; font-size: 13px; padding: 5px 15px; line-height: 1.25;
+  background: linear-gradient(var(--xo-orange), var(--xo-orange)) left center / 3px 42% no-repeat, linear-gradient(var(--xo-orange), var(--xo-orange)) right center / 3px 42% no-repeat, var(--xo-glass);
+  border: 2px solid var(--xo-frame);
+}
+.btn.small { padding: 3px 12px; font-size: 12.5px; }
+.btn:hover { border-color: #fff; background: linear-gradient(var(--xo-cream), var(--xo-cream)) left center / 3px 42% no-repeat, linear-gradient(var(--xo-cream), var(--xo-cream)) right center / 3px 42% no-repeat, rgba(255, 102, 0, .8); }
+.btn:active:not(:disabled) { background: var(--xo-orange-hi); border-color: var(--xo-cream); box-shadow: 0 0 10px rgba(255, 144, 19, .75); }
+.btn:disabled { opacity: .4; color: #8a8f96; cursor: default; }
+.btn:disabled:hover { border-color: var(--xo-frame); background: var(--xo-glass); }
+html.skin .btn { background: transparent; border: 1px solid transparent; border-image: var(--sp-btn) 26 16 26 16 fill / 13px 8px 13px 8px stretch; }
+html.skin .btn.small { border-image-width: 12px 7px 12px 7px; }
+html.skin .btn:hover { border-image-source: var(--sp-btn-hover); background: transparent; }
+html.skin .btn:active:not(:disabled) { border-image-source: var(--sp-btn-pressed); background: transparent; box-shadow: none; }
+html.skin .btn:disabled:hover { border-image-source: var(--sp-btn); }
+.btn .gi { font-size: 15px; margin: -2px 6px -2px -2px; vertical-align: -3px; }
+.btn.small .gi { font-size: 14px; margin-right: 5px; }
+/* a button that stays on: the game's "preselected" button, white frame, orange ears */
+.btn.on, .ref-controls .btn.on { border-color: #fff; }
+html.skin .btn.on, html.skin .ref-controls .btn.on { border-image-source: var(--sp-btn-preselect); }
+html.skin .btn.on:hover { border-image-source: var(--sp-btn-hover); }
+
+/* the dense rows of small buttons in the panels: the game's flat button (black glass, a grey frame;
+   white under the mouse; pressed: a cream frame round an orange glow) */
+.inspector .btn.small:not(.primary), .rot .btn.small {
+  background: var(--xo-glass); border: 2px solid var(--xo-frame);
+}
+.inspector .btn.small:not(.primary):hover, .rot .btn.small:hover { background: var(--xo-glass); border-color: #fff; }
+.inspector .btn.small:not(.primary):active:not(:disabled), .rot .btn.small:active:not(:disabled) { border-color: var(--xo-cream); background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .9) 30%, rgba(255, 102, 0, .6) 100%); box-shadow: 0 0 6px rgba(255, 144, 19, .6); color: var(--xo-cream); }
+html.skin .inspector .btn.small:not(.primary), html.skin .rot .btn.small { background: transparent; border: 1px solid transparent; border-image: var(--sp-flat) 12 fill / 6px stretch; }
+html.skin .inspector .btn.small:not(.primary):hover, html.skin .rot .btn.small:hover { border-image-source: var(--sp-flat-hover); background: transparent; }
+html.skin .inspector .btn.small:not(.primary):active:not(:disabled), html.skin .rot .btn.small:active:not(:disabled) { border-image-source: var(--sp-flat-pressed); background: transparent; box-shadow: none; }
+html.skin .inspector .btn.small.on { border-image-source: var(--sp-flat-pressed); color: var(--xo-cream); }
+
+/* Record: a red diamond; while it records the button is red and the diamond blinks */
+.btn.rec-btn::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 7px; background: #f23f4a; transform: rotate(45deg); vertical-align: 1px; box-shadow: 0 0 4px rgba(242, 63, 74, .8); }
+.btn.rec-btn.on { color: #fff; border-color: #ff8a90; background: linear-gradient(180deg, #c42a1f, #7b3439); box-shadow: 0 0 10px rgba(242, 63, 74, .55); }
+/* (skin: see the end of the file) */
+.btn.rec-btn.on::before { background: #fff; animation: xo-blink 1s steps(2) infinite; }
+@keyframes xo-blink { 50% { opacity: .2; } }
+
+/* the main act of a card (Export…, Make the list, Choose folder…): the hangar's orange button
+   with its slanted end (Add to garage) */
+.btn.primary {
+  position: relative; color: #fff; font-weight: 700; font-size: 13.5px; text-shadow: 0 1px 0 rgba(90, 30, 0, .55);
+  border: 0; padding: 7px 18px 7px 24px;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0) 30%, rgba(255, 220, 160, .18) 30.5%, rgba(255, 220, 160, .18) 37%, rgba(255, 255, 255, 0) 37.5%), linear-gradient(180deg, #bd5108 0%, #c95c08 50%, #ce6508 100%);
+  box-shadow: inset 0 0 0 1px #e7a26b;
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%);
+}
+.btn.primary:hover { background: linear-gradient(115deg, rgba(255, 255, 255, 0) 30%, rgba(255, 230, 180, .26) 30.5%, rgba(255, 230, 180, .26) 37%, rgba(255, 255, 255, 0) 37.5%), linear-gradient(180deg, #d9620f 0%, #e2701a 55%, #ef7c1c 100%); box-shadow: inset 0 0 0 1px #fff; }
+.btn.primary:active:not(:disabled) { filter: brightness(.86); }
+.btn.primary.wide { padding: 9px 18px 9px 26px; font-size: 14px; margin-top: 10px; }
+.btn.primary.small { padding: 4px 12px 4px 17px; font-size: 12.5px; clip-path: polygon(8px 0, 100% 0, 100% 100%, 0 100%); }
+html.skin .btn.primary { clip-path: none; background: transparent; box-shadow: none; border: 1px solid transparent; border-image: var(--sp-act) 0 4 0 52 fill / 0 2px 0 18px stretch; padding-left: 26px; }
+html.skin .btn.primary:hover { border-image-source: var(--sp-act-hover); background: transparent; box-shadow: none; filter: drop-shadow(0 0 5px rgba(255, 144, 19, .55)); }
+html.skin .btn.primary:active:not(:disabled) { border-image-source: var(--sp-act); filter: brightness(.86); }
+html.skin .btn.primary.wide { border-image-width: 0 2px 0 22px; padding-left: 30px; }
+html.skin .btn.primary.small { border-image-width: 0 2px 0 14px; padding-left: 19px; }
+.btn.primary:disabled { filter: grayscale(1) brightness(.6); opacity: .7; color: #a0a4a8; }
+.two-btn .btn { padding: 8px 10px; }
+.two-btn .btn.primary { padding: 8px 12px 8px 22px; }
+
+/* the drives (Test drive, Drive): the hangar's slanted Test drive button */
+#bDrive, #mDrive {
+  color: #fff; font-weight: 700; padding: 5px 22px; border: 0; text-shadow: 0 1px 0 rgba(80, 20, 0, .6);
+  background: linear-gradient(180deg, #c65908 0%, #a53808 60%, #942908 100%);
+  clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+}
+#bDrive:hover, #mDrive:hover { background: linear-gradient(180deg, #e77910 0%, #c64d08 100%); }
+html.skin #bDrive, html.skin #mDrive { clip-path: none; background: transparent; border: 1px solid transparent; border-image: var(--sp-go) 0 62 2 64 fill / 0 15px 0 16px stretch; padding: 3px 22px; }
+html.skin #bDrive:hover, html.skin #mDrive:hover { border-image-source: var(--sp-go-hover); background: transparent; filter: drop-shadow(0 0 5px rgba(255, 144, 19, .55)); }
+#mDrive.on { filter: brightness(1.15) drop-shadow(0 0 7px rgba(255, 144, 19, .85)); }
+#bDrive .gi, #mDrive .gi { font-size: 15px; margin-right: 6px; }
+
+/* the garage's buttons with an icon (Aug. reality, Lift car, Parts list): the game's flat button;
+   on: its pressed look, the orange glowing inside it */
+.gbtn { border-radius: 0; background: var(--xo-glass); border: 2px solid var(--xo-frame); color: var(--xo-text2); padding: 3px 10px 3px 7px; font-weight: 600; font-size: 12.5px; font-family: var(--xo-font-ui); }
+.gbtn:hover { border-color: #fff; color: #fff; }
+.gbtn.on { color: var(--xo-cream); border-color: var(--xo-cream); background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .9) 30%, rgba(255, 102, 0, .6) 100%); box-shadow: 0 0 6px rgba(255, 144, 19, .5); }
+html.skin .gbtn { background: transparent; border: 1px solid transparent; border-image: var(--sp-flat) 12 fill / 6px stretch; }
+html.skin .gbtn:hover { border-image-source: var(--sp-flat-hover); }
+html.skin .gbtn.on { border-image-source: var(--sp-flat-pressed); background: transparent; box-shadow: none; }
+
+/* small quiet buttons in lists (a texture's PNG / DDS / Replace…, the checklist's go and its
+   suggestions): the 2026 tertiary button, a thin frame */
+.tex .acts button, .ck-row .cs button, .ck-row .cgo {
+  border-radius: 0; background: transparent; border: 1px solid rgba(255, 255, 255, .4); color: var(--xo-text2); font-size: 11.5px; padding: 1px 8px; font-weight: 600;
+}
+.tex .acts button:hover, .ck-row .cs button:hover, .ck-row.go:hover .cgo { border-color: #fff; color: #fff; background: rgba(255, 255, 255, .06); }
+.tex .acts button:active, .ck-row .cs button:active, .ck-row .cgo:active { border-color: var(--xo-cream); color: var(--xo-cream); }
+html.skin .tex .acts button, html.skin .ck-row .cs button, html.skin .ck-row .cgo { border: 2px solid transparent; padding: 0 6px; border-image: var(--sp-tert) 4 fill / 4px stretch; }
+html.skin .tex .acts button:hover, html.skin .ck-row .cs button:hover, html.skin .ck-row.go:hover .cgo { border-image-source: var(--sp-tert-hover); }
+html.skin .tex .acts button:active, html.skin .ck-row .cs button:active, html.skin .ck-row .cgo:active { border-image-source: var(--sp-tert-pressed); }
+
+/* segmented choices (GLB / glTF / OBJ, the handles): the 2026 filter's arrow tabs, each pointing
+   into the next; the one picked dark with its frame lit. (The game tints its sand sprites: taken
+   toward the slate here.) */
+.seg { border: 0; border-radius: 0; background: none; gap: 0; overflow: visible; }
+.seg button {
+  position: relative; background: var(--xo-tile); color: var(--xo-text2); font-weight: 600; font-size: 12.5px; padding: 5px 8px;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%, 8px 50%);
+}
+.seg button:first-child { clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%); }
+.seg button:last-child { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 8px 50%); }
+.seg button + button { margin-left: -5px; border-left: 0; }
+.seg button:not(.on):hover { color: #fff; background: var(--xo-tile-hi); }
+.seg button.on { color: #fff; background: linear-gradient(180deg, rgba(255, 102, 0, .32), rgba(255, 102, 0, 0) 80%), #1d2229; box-shadow: inset 0 3px 0 var(--xo-orange-hi); }
+.seg.small button { font-size: 12px; padding: 3px 9px; }
+html.skin .seg button { clip-path: none; background: transparent; box-shadow: none; border: 1px solid transparent; padding: 5px 18px 5px 17px; margin-left: -13px;
+  border-image: var(--sp-arrow-both-idle) 0 28 0 28 fill / 0 17.5px 0 17.5px stretch; }
+html.skin .seg button:first-child { margin-left: 0; padding-left: 10px; border-image: var(--sp-arrow-left-idle) 0 27 0 7 fill / 0 17px 0 4.5px stretch; }
+html.skin .seg button:last-child { padding-right: 10px; border-image: var(--sp-arrow-right-idle) 0 28 0 28 fill / 0 17.5px 0 17.5px stretch; }
+html.skin .seg button:not(.on):hover { background: transparent; border-image-source: var(--sp-arrow-both-over); }
+html.skin .seg button:first-child:not(.on):hover { border-image-source: var(--sp-arrow-left-over); }
+html.skin .seg button:last-child:not(.on):hover { border-image-source: var(--sp-arrow-right-over); }
+html.skin .seg button:active { border-image-source: var(--sp-arrow-both-pressed); }
+html.skin .seg button:first-child:active { border-image-source: var(--sp-arrow-left-pressed); }
+html.skin .seg button:last-child:active { border-image-source: var(--sp-arrow-right-pressed); }
+html.skin .seg button.on { background: transparent; box-shadow: none; z-index: 1; filter: none; border-image-source: var(--sp-arrow-both-checked); }
+html.skin .seg button:first-child.on { border-image-source: var(--sp-arrow-left-checked); }
+html.skin .seg button:last-child.on { border-image-source: var(--sp-arrow-right-checked); }
+html.skin .seg.small button { padding: 3px 15px 3px 14px; border-image-width: 0 13.5px 0 13.5px; margin-left: -10px; }
+html.skin .seg.small button:first-child { margin-left: 0; padding-left: 9px; border-image-width: 0 13px 0 3.4px; }
+html.skin .seg.small button:last-child { padding-right: 9px; }
+.seg button .gi { font-size: 14px; margin-right: 5px; vertical-align: -3px; }
+
+/* ---- the toolbars over the view: the HUD's dark glass plates ---- */
+.view-tools {
+  border-radius: 0; background: rgba(9, 11, 15, .84); border: 1px solid var(--xo-line2);
+  box-shadow: inset 0 2px 0 #232431, 0 4px 14px rgba(0, 0, 0, .45); padding: 6px 10px 6px 12px;
+}
+.view-tools::before { content: ''; position: absolute; left: -1px; top: -1px; width: 38px; height: 2px; background: var(--xo-orange-hi); box-shadow: 0 0 6px rgba(255, 102, 0, .6); }
+.sep { background: linear-gradient(180deg, transparent, #4a525b 25%, #4a525b 75%, transparent); }
+.view-tools label.range .val { color: #fff; font-family: var(--xo-font-ui); font-weight: 600; }
+
+/* the Keys button, the busy line, the tip under the mouse (the game's tooltip: black, a pale frame,
+   a white tab in its corner) */
+.keys-btn { border-radius: 0; background: var(--xo-glass); border: 2px solid var(--xo-frame); font-family: var(--xo-font-ui); font-size: 12.5px; font-weight: 600; padding: 3px 11px 3px 8px; color: var(--xo-text2); }
+.keys-btn:hover { border-color: #fff; color: #fff; }
+.keys-btn .gi { font-size: 15px; vertical-align: -3px; margin-right: 4px; }
+.busy { border-radius: 0; background: rgba(0, 0, 0, .88); border: 1px solid rgba(206, 207, 206, .5); box-shadow: 0 6px 16px rgba(0, 0, 0, .55); padding: 7px 16px 7px 14px; }
+.spinner { width: 12px; height: 12px; border: 2px solid var(--xo-glow); border-radius: 0; transform: rotate(45deg); animation: xo-spin 1s steps(4) infinite; box-shadow: 0 0 6px rgba(255, 144, 19, .6); }
+@keyframes xo-spin { from { transform: rotate(45deg); } to { transform: rotate(405deg); } }
+.hover-tip { border-radius: 0; background: rgba(0, 0, 0, .92); border: 1px solid rgba(206, 207, 206, .5); padding: 3px 9px; box-shadow: 0 6px 16px rgba(0, 0, 0, .55); }
+.hover-tip::before { content: ''; position: absolute; left: -1px; top: -1px; width: 4px; height: 4px; background: #fff; }
+.marquee { border-color: var(--xo-orange-hi); }
+
+/* the empty view: the garage's big caption, the game's divider (a line with a notch) under it */
+.empty h1 { font-family: var(--xo-font-ui); font-size: 24px; font-weight: 600; color: #fff; margin: 16px 0 4px; text-shadow: 0 2px 8px rgba(0, 0, 0, .6); }
+.empty h1::after { content: ''; display: block; width: 320px; max-width: 70vw; height: 12px; margin: 8px auto 10px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55) 30%, rgba(255, 255, 255, .55) 70%, transparent) center / 100% 1px no-repeat; }
+html.skin .empty h1::after { background: var(--sp-divider) center / 100% 100% no-repeat; opacity: .85; }
+.empty p { color: var(--xo-text2); line-height: 1.5; font-size: 13.5px; }
+.empty p b { color: #fff; font-weight: 600; }
+
+/* ---- the cards of the right panel: the game's windows (a header band with the window header's
+   hatching, sharp corners) ---- */
+.inspector { gap: 8px; }
+.inspector .card {
+  border-radius: 0; border: 0; padding: 10px 12px 12px;
+  background: linear-gradient(180deg, #1b1f25 0%, #15191e 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 2px 10px rgba(0, 0, 0, .35);
+}
+.inspector .card h3 {
+  position: relative; margin: -10px -12px 10px; padding: 8px 64px 7px 14px; text-transform: none;
+  font-family: var(--xo-font-ui); font-size: 14px; font-weight: 600; letter-spacing: 0; color: #fff;
+  background: linear-gradient(90deg, #2b323b 0%, #232931 55%, #1d2228 100%); border-top: 2px solid #3a414a;
+  box-shadow: inset 3px 0 0 var(--xo-orange-hi);
+}
+.inspector .card h3::after { content: ''; position: absolute; right: 12px; top: 50%; width: 46px; height: 8px; margin-top: -4px; background: repeating-linear-gradient(120deg, rgba(0, 0, 0, .55) 0 2px, transparent 2px 5px); }
+.inspector .card h3 .count { color: var(--xo-faint); font-weight: 400; }
+.inspector .card h3.sel-exp { margin: 14px -12px 10px !important; }
+.inspector .card h2 { font-family: var(--xo-font-ui); font-size: 19px; font-weight: 600; color: #fff; }
+/* the 3D Viewer's welcome: the empty views' diamond and caption, then what a part can do on four
+   plates with the game's icons (two rows in a narrow view), and the search keys */
+#empty { container: welcome / inline-size; }
+.welcome { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+.welcome .empty-ico { width: 52px; height: 52px; margin-bottom: 18px; }
+.welcome .empty-ico .gi { font-size: 29px; }
+.welcome-tiles { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 158px); gap: 12px; }
+@container welcome (max-width: 690px) { .welcome-tiles { grid-template-columns: repeat(2, 158px); } }
+.welcome-tiles li { display: flex; flex-direction: column; align-items: center; padding: 18px 12px 15px;
+  background: linear-gradient(180deg, rgba(255, 144, 19, .10) 0%, rgba(255, 144, 19, 0) 55%), rgba(10, 12, 16, .84);
+  border: 1px solid rgba(255, 255, 255, .07); border-top: 2px solid var(--xo-orange); box-shadow: 0 8px 22px rgba(0, 0, 0, .45); }
+.welcome-tiles .gi { font-size: 34px; color: var(--xo-glow); filter: drop-shadow(0 0 7px rgba(255, 144, 19, .5)); margin-bottom: 12px; }
+.welcome-tiles b { font-family: var(--xo-font-ui); font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #fff; margin-bottom: 5px; }
+.welcome-tiles span { font-size: 12px; line-height: 1.45; color: var(--xo-text2); text-wrap: balance; }
+.empty .welcome-search { display: flex; align-items: center; gap: 4px; margin-top: 22px; font-size: 12.5px; }
+.welcome-search > span { margin: 0 2px; }
+
+.path { color: var(--xo-faint); word-break: normal; overflow-wrap: anywhere; }
+.stats { border-top: 1px solid rgba(255, 255, 255, .06); padding-top: 8px; }
+.stats dt { color: var(--xo-text2); }
+.stats dd { color: #fff; font-family: var(--xo-font-ui); font-weight: 600; font-variant-numeric: tabular-nums lining-nums; }
+.hint { color: #8a9199; line-height: 1.45; }
+.hint b { color: #fff; }
+.warnings { color: #ffa116; }
+.result a { color: #ffb266; }
+.line { color: var(--xo-text2); }
+.title-row .icon-btn { opacity: .85; }
+.sel-kind { color: #ffb266; }
+
+/* progress: a dark rail, its fill orange with the loading bars' moving stripes, a cream lead edge */
+.progress { height: 8px; border-radius: 0; background: rgba(0, 0, 0, .5); border: 1px solid #2a3038; }
+.progress div { background: repeating-linear-gradient(120deg, #ff6600 0 6px, #cb6600 6px 12px); background-size: 28px 100%; animation: xo-stripes .8s linear infinite; box-shadow: inset -2px 0 0 var(--xo-cream), 0 0 8px rgba(255, 144, 19, .5); }
+@keyframes xo-stripes { to { background-position: 28px 0; } }
+
+/* materials: sharp thumbnails in a frame, the roles in the game's orange */
+.mat { border-top-color: rgba(255, 255, 255, .06); }
+.mat[data-mat] .mat-head { border-radius: 0; padding-left: 9px; }
+.mat[data-mat] .mat-head:hover { background: var(--xo-hover-row); }
+.mat.sel .mat-head { background: var(--xo-sel-row); box-shadow: none; }
+.mat.sel .mat-head b, .mat.sel .mat-head { color: #fff; }
+.tex .thumb { border-radius: 0; border: 1px solid #4a5159; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .6); }
+.tex .thumb:hover { border-color: #fff; }
+.tex .role { color: #ff8a2a; letter-spacing: .06em; font-family: var(--xo-font-ui); }
+.adjust { border-radius: 0; background: rgba(0, 0, 0, .3); border: 1px solid #2a3038; }
+.swatches button { border-radius: 0; border-color: rgba(255, 255, 255, .25); }
+.swatches button:hover { outline: 2px solid #fff; outline-offset: 0; }
+
+/* lists inside the cards (the build's parts, pictures, checklist, a map's kinds): the game's menu
+   rows (a grey fade with a dark bar under the mouse, the orange fade with its bar when picked) */
+.brow, .ref-row, .ck-row, .mp-kinds div { border-radius: 0; padding-left: 9px; }
+.brow:hover, .ref-row:hover, .ck-row.go:hover, .mp-kinds div:hover { background: var(--xo-hover-row); }
+.brow.sel, .ref-row.on, .brow.sel.primary { background: var(--xo-sel-row); }
+.brow.sel .bs, .brow.sel .bn { color: #fff; }
+.ref-row.on { border-color: transparent; }
+.ref-row img, .map-row img, .map-row .ph { border-radius: 0; }
+.ck-row .cq { border-radius: 0; background: var(--xo-tile); }
+.ck-row.done { background: linear-gradient(rgba(0, 201, 164, .49), rgba(0, 201, 164, .49)) 0 0 / 2px 100% no-repeat, linear-gradient(90deg, rgba(0, 201, 164, .25), rgba(0, 201, 164, .13)); }
+.ck-row.done .cq { color: #4fe3c4; background: rgba(0, 201, 164, .16); }
+.ck-edit summary { color: #ffb266; }
+.ck-edit summary::marker { color: #ff7a1a; }
+.save-btn .unsaved { border-radius: 0; transform: rotate(45deg); background: var(--xo-glow); box-shadow: 0 0 5px rgba(255, 144, 19, .8); }
+.build-file.unsaved { color: #ffa116; }
+.sel-x { border-radius: 0; color: rgba(255, 255, 255, .6); }
+.sel-x:hover { background: rgba(242, 63, 74, .2); color: rgba(255, 255, 255, .8); }
+.brow .bx:hover, .ref-row .rx:hover { color: #f23f4a; }
+
+/* ---- the left side's lists in All files and Maps: the game's menu rows ---- */
+.row-item { border-left: 0; }
+.row-item:hover { background: var(--xo-hover-row); }
+.row-item.sel { background: var(--xo-sel-row); color: #fff; }
+.row-item.sel .sub { color: #ffd9b5; }
+.list .card { border-left: 1px solid #2a3037; }
+.list .card:hover { border-color: var(--rc); background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 21%, #1d2228) 0%, #1c2127 55%, #181b20 100%); }
+.list .card.sel { border-left: 2px solid var(--rc); }
+.row-item .badge { border-radius: 0; background: rgba(0, 0, 0, .45); border: 0; color: var(--xo-faint); font-variant-numeric: tabular-nums; }
+.row-item .kind { color: #ff8a2a; }
+.files-bar { border-top-color: var(--xo-line); background: #0d1116; }
+.card-strip { border-radius: 0; background: #0d1116; border-color: #2a3038; }
+.map-row { border-left: 0; }
+.map-row:hover { background: var(--xo-hover-row); }
+.map-row.sel { background: var(--xo-sel-row); }
+.map-row img, .map-row .ph { border: 1px solid #3a4149; }
+.map-row:hover img, .map-row.sel img { border-color: #fff; }
+.map-row .mn { font-family: var(--xo-font-ui); font-weight: 600; font-size: 14px; color: var(--xo-text2); }
+.map-row.sel .mn, .map-row:hover .mn { color: #fff; }
+.map-row.sel .ms { color: #ffd9b5; }
+.map-list { background: linear-gradient(160deg, #090b0f 0%, #0d1116 35%, #161a20 70%, #22252a 100%); }
+
+/* ---- the texture viewer: a game window ---- */
+.tex-preview { border-radius: 0; background: rgba(9, 11, 15, .97); border: 1px solid var(--xo-line2); box-shadow: 0 8px 30px rgba(0, 0, 0, .6); }
+.tex-head { background: linear-gradient(90deg, #2b323b, #1d2228 70%); border-bottom: 1px solid #000; border-top: 2px solid #3a414a; box-shadow: inset 3px 0 0 var(--xo-orange-hi); padding: 6px 10px 7px 14px; }
+.tex-head span { font-family: var(--xo-font-ui); font-weight: 600; color: #fff; }
+
+/* ---- the garage HUD (Vehicle Builder): plates with sharp corners ---- */
+.part-card { border-radius: 0; border: 1px solid var(--xo-line2); background: rgba(13, 17, 22, .92); box-shadow: 0 6px 16px rgba(0, 0, 0, .55); }
+.pc-head { --rc: #a2a8ae; border-top: 3px solid var(--rc); box-shadow: none; background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 22%, transparent) 0%, transparent 90%); }
+.pc-head .pc-name { color: var(--rc); font-family: var(--xo-font-ui); font-weight: 600; }
+.pc-head.r-common { --rc: #ffffff; } .pc-head.r-rare { --rc: #379bfd; } .pc-head.r-special { --rc: #47c9c8; }
+.pc-head.r-epic { --rc: #ca40fe; } .pc-head.r-legendary { --rc: #ffa116; } .pc-head.r-relic { --rc: #ff6600; }
+.pc-type { color: #8c939b; }
+.pc-row span { color: var(--xo-text2); }
+.pc-row b, .vs-row b, .eb-cell b, .map-speed b { font-family: var(--xo-font-ui); }
+.parts-list { border-radius: 0; border: 1px solid var(--xo-line2); background: rgba(9, 11, 15, .94); }
+.pl-main h2 { font-family: var(--xo-font-ui); font-size: 17px; color: #fff; padding-bottom: 7px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.pl-side { border-left-color: #2a3038; background: rgba(0, 0, 0, .25); }
+.vs-head { color: #fff; font-family: var(--xo-font-ui); }
+.vs-row span { color: var(--xo-text2); }
+.vs-bar .bar { border-radius: 0; }
+#center.compact .garage-keys { border-radius: 0; background: rgba(9, 11, 15, .86); border-color: var(--xo-line2); }
+.map-speed { border-radius: 0; background: rgba(9, 11, 15, .84); border: 1px solid var(--xo-line2); box-shadow: inset 0 2px 0 #232431; }
+.map-speed .ms-bars i { border-radius: 0; }
+.map-speed .ms-bars i.on { background: var(--xo-orange-hi); box-shadow: 0 0 4px rgba(255, 102, 0, .6); }
+.mini-map { border-radius: 0; border: 1px solid rgba(255, 255, 255, .85); box-shadow: 0 0 0 1px #000, 0 6px 18px rgba(0, 0, 0, .5); }
+.kc:not(:has(svg)) { border-radius: 0; font-family: var(--xo-font-ui); background: #1b1f25; border-color: #3a414a; box-shadow: inset 0 -2px 0 #0b0e12; }
+
+/* ---- the game-folder dialog: the game's dialog window, its orange header with the hatching ---- */
+.modal { background: rgba(4, 6, 9, .72); backdrop-filter: blur(3px); }
+.modal-card { border-radius: 0; padding: 0 0 16px; border: 1px solid var(--xo-line2); background: linear-gradient(180deg, #13171c, #0d1013); box-shadow: 0 16px 50px rgba(0, 0, 0, .7); color: var(--xo-text3); }
+.modal-card h2 { margin: 0 0 14px; padding: 12px 120px 14px 18px; font-family: var(--xo-font-ui); font-size: 17px; font-weight: 600; color: #fff; text-shadow: 0 1px 2px rgba(60, 20, 0, .8);
+  background: repeating-linear-gradient(120deg, rgba(40, 20, 8, .55) 0 3px, transparent 3px 7px) right 18px top 12px / 90px 14px no-repeat, linear-gradient(180deg, #ff7a1a, #e05a00); }
+html.skin .modal-card h2 { background: transparent; border: 0; border-image: var(--sp-dialog) 16 114 25 7 fill / 16px 114px 25px 7px stretch; padding: 14px 120px 22px 18px; }
+.modal-card p, .modal-card .row { padding: 0 18px; }
+
+/* ---- small windows (the builder and Maps on a 1080p screen): the toolbar's buttons that have the
+   game's icon show only it (their names stay in their tips) ---- */
+.view-tools .btn.small { padding: 3px 11px; font-size: 12.5px; }
+#center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive) { font-size: 0; padding: 3px 9px; }
+#center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive) > .gi { font-size: 15px; margin: 0; }
+#center.compact .view-tools .seg button:has(> .gi) { font-size: 0; }
+#center.compact .view-tools .seg button > .gi { font-size: 15px; margin: 0; }
+#center.compact .save-btn .unsaved { margin-right: 4px; }
+.inspector .row .btn.small { padding: 3px 10px; }
+.inspector .row { gap: 6px 5px; }
+.game:disabled, .icon-btn:disabled, .gbtn:disabled, .keys-btn:disabled { opacity: .45; cursor: default; }
+.game:disabled:hover { border-bottom-color: var(--xo-field-line); background: var(--xo-field); color: var(--xo-text3); }
+.line.dim, label.line.dim { opacity: .5; }
+
+/* =================================================================================================
+   Review round 1 (screenshots checked against the game; each finding verified)
+   ================================================================================================= */
+/* the mouse tip under the garage HUD (the part card names the part already) */
+.garage-hud { z-index: 4; }
+.part-card { background: rgba(13, 17, 22, .97); }
+/* the Maps column: as wide as its column (long names end in "…", its scroll bar shows) */
+.map-side { min-width: 0; }
+.map-row { grid-template-columns: 76px minmax(0, 1fr); position: relative; }
+.map-row > div { min-width: 0; }
+.map-row::after { content: ''; position: absolute; left: 6px; right: 4px; bottom: 0; height: 1px; background: #1b1f24; pointer-events: none; }
+/* the parts list's tiles: the part's rarity on top, its tint, framed in it when picked; a loose
+   part (not welded) striped red with a red foot */
+.pl-tile { --rc: #a2a8ae; border-radius: 0; border: 0; border-top: 3px solid var(--rc); background: linear-gradient(180deg, color-mix(in srgb, var(--rc) 12%, #1f242a) 0%, #15191c 100%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .05); }
+.pl-tile.r-common { --rc: #fff; } .pl-tile.r-rare { --rc: #379bfd; } .pl-tile.r-special { --rc: #47c9c8; }
+.pl-tile.r-epic { --rc: #ca40fe; } .pl-tile.r-legendary { --rc: #ffa116; } .pl-tile.r-relic { --rc: #ff6600; }
+.pl-tile:hover { border-top-color: var(--rc); box-shadow: none; outline: 2px solid #606369; outline-offset: -2px; }
+.pl-tile.sel { border-top-color: var(--rc); box-shadow: none; outline: 2px solid var(--rc); outline-offset: -2px; }
+.pl-tile.loose { background: repeating-linear-gradient(120deg, rgba(242, 63, 74, .14) 0 3px, transparent 3px 8px), linear-gradient(180deg, color-mix(in srgb, var(--rc) 12%, #1f242a), #15191c); box-shadow: inset 0 -3px 0 #f23f4a; }
+.pl-tile.loose:hover, .pl-tile.loose.sel { box-shadow: inset 0 -3px 0 #f23f4a; }
+.pl-main h2 { position: relative; margin: 16px -18px 12px; padding: 9px 70px 8px 18px; font-size: 15px; font-weight: 600; border-bottom: 0;
+  background: linear-gradient(90deg, #2b323b 0%, #232931 55%, #1d2228 100%); border-top: 2px solid #3a414a; box-shadow: inset 3px 0 0 var(--xo-orange-hi); }
+.pl-main h2:first-child { margin-top: -6px; }
+.pl-main h2::after { content: ''; position: absolute; right: 14px; top: 50%; width: 46px; height: 8px; margin-top: -4px; background: repeating-linear-gradient(120deg, rgba(0, 0, 0, .55) 0 2px, transparent 2px 5px); pointer-events: none; }
+.pl-main h2 .count { color: var(--xo-faint); font-weight: 400; }
+#center:has(#partsList:not([hidden])) #keysBtn { visibility: hidden; }
+/* vehicle stats: the value on top, white, its name under it, grey (as the other rows); a section
+   caption for "When driving" */
+.vs .vs-bar > div > span:last-child { order: -1; color: #fff; font-family: var(--xo-font-ui); font-weight: 700; font-size: 17px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.vs.compact .vs-bar > div > span:last-child { font-size: 14px; }
+.vs .vs-bar > div > b { order: 2; font-family: var(--xo-font); font-weight: 400; font-size: 13px; color: var(--xo-text2); }
+.vs.compact .vs-bar > div > b { font-size: 11.5px; }
+.vs .vs-bar.warn > div > span:last-child { color: #ffa116; }
+.vs-head { font-family: var(--xo-font-ui); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #8c939b; margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .06); }
+.vs-head::before { content: ''; display: inline-block; width: 3px; height: 9px; margin-right: 6px; background: var(--xo-orange-hi); vertical-align: -1px; }
+/* the toolbar's icon-only buttons are all the game's flat button (one family with Aug. reality,
+   Lift car, Parts list); buttons with words keep the eared one */
+#center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive) { padding: 3px 7px; background: var(--xo-glass); }
+#center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive):hover:not(:disabled) { background: var(--xo-glass); border-color: #fff; }
+#center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive):active:not(:disabled) { border-color: var(--xo-cream); background: radial-gradient(ellipse at 50% 50%, rgba(0, 0, 0, .9) 30%, rgba(255, 102, 0, .6) 100%); box-shadow: 0 0 6px rgba(255, 144, 19, .6); }
+html.skin #center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive) { background: transparent; border-image: var(--sp-flat) 12 fill / 6px stretch; }
+html.skin #center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive):hover:not(:disabled) { border-image-source: var(--sp-flat-hover); background: transparent; }
+html.skin #center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive):active:not(:disabled) { border-image-source: var(--sp-flat-pressed); background: transparent; box-shadow: none; }
+#center.compact .gbtn { padding: 2px 7px; }
+/* Team 1 / Team 2 tell apart when only their icon shows; Overview keeps its word */
+#center.compact #mapTools [data-go^=team]::after { font: 700 11px/1 var(--xo-font-ui); color: var(--xo-cream); margin-left: 3px; vertical-align: 1px; }
+#center.compact #mapTools [data-go=team1]::after { content: '1'; }
+#center.compact #mapTools [data-go=team2]::after { content: '2'; }
+#center.compact #mapTools .btn.small[data-go=overview]:not(#bDrive):not(#mDrive) { font-size: 12.5px; }
+#center.compact #mapTools .btn.small[data-go=overview]:not(#bDrive):not(#mDrive) > .gi { margin-right: 5px; }
+/* no lone separators at the ends of wrapped toolbar rows; the selects as tall as the buttons */
+#center.compact #viewTools > .sep:has(+ #lightSel) { display: none; }
+#center.compact #buildTools > .sep:has(+ .chk > #bSym) { visibility: hidden; }
+.view-tools select { padding: 2px 26px 1px 8px; }
+/* the map's toolbar only as long as what it holds */
+#mapTools { right: auto; max-width: calc(100% - 24px); }
+/* My build's file buttons: one bar */
+#buildPanel .card > .row:has(> #bSaveAs) { flex-wrap: nowrap; }
+#buildPanel .card > .row:has(> #bSaveAs) > .btn { flex: 1 1 auto; min-width: 0; padding-left: 6px; padding-right: 6px; white-space: nowrap; }
+/* drop-downs in a card: one left edge (the gun's and a skin's long names: the whole row) */
+.inspector .line > select { flex: 0 1 170px; width: 170px; min-width: 0; }
+.inspector .line > #mpGun, .inspector .line > #bSkin { flex: 1 1 auto; width: auto; }
+select { text-overflow: ellipsis; white-space: nowrap; }
+/* the Animation card: one label column, one value column */
+.fx-row > span:not(.val) { flex: 0 0 96px; }
+.fx-row .val { min-width: 44px; }
+/* label sizes and the box-to-label gap the same in every card */
+#mapPanel .ar, #bFireCard .ar, .ref-controls .ar { font-size: 13px; }
+.map-show label, .chk.line { gap: 7px; }
+/* the empty views: the game's icon in a diamond frame */
+.empty-ico { width: 46px; height: 46px; display: grid; place-items: center; transform: rotate(45deg); margin: 0 auto 14px; background: rgba(9, 11, 15, .85); border: 2px solid var(--xo-frame); box-shadow: 0 0 0 1px #000, 0 0 16px rgba(255, 144, 19, .35); }
+.empty-ico .gi { transform: rotate(-45deg); font-size: 26px; color: var(--xo-glow); }
+#buildEmpty .empty-ico { display: none; } /* (the energy bar sits there) */
+/* the top bar's logo: square, framed */
+#topbar .logo { box-sizing: border-box; object-fit: cover; object-view-box: inset(7px); background: #1d1f24; border: 1px solid #3a414a; }
+/* the search fields: the game's white magnifier (lens up right, handle down left) */
+#search, #mapSearch { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='14.5' cy='9.5' r='6.5'/%3E%3Cpath d='M9.9 14.1 3 21'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 8px center; background-size: 18px 18px; padding-left: 34px; }
+input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; width: 12px; height: 12px; cursor: pointer; opacity: .6;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 2l8 8M10 2l-8 8' stroke='%23ffffff' stroke-width='1.8'/%3E%3C/svg%3E") center / 12px 12px no-repeat; }
+input[type=search]::-webkit-search-cancel-button:hover { opacity: 1; }
+/* All files: rows grey at rest, white when they matter; the kinds calmer */
+.row-item:not(.card) { color: var(--xo-text2); }
+.row-item:not(.card) .name { font-family: var(--xo-font-ui); font-weight: 600; }
+.row-item:not(.card):hover, .row-item.sel, .row-item:not(.card):has(input:checked) { color: #fff; }
+.row-item .kind { font: 600 10.5px "Cascadia Mono", Consolas, monospace; color: #b98a64; }
+.row-item:hover .kind, .row-item.sel .kind { color: #ffb266; }
+/* the part's own card in its rarity (its name in it, a bar of it on top) */
+#inspector > .card:first-child { border-top: 3px solid var(--rc, #2b323b); background: linear-gradient(180deg, color-mix(in srgb, var(--rc, #1b1f25) 12%, #1b1f25) 0%, #15191e 40%); }
+#inspector > .card:first-child #mName { color: var(--rc, #fff); }
+#inspector > .card.r-none:first-child #mName, #inspector > .card.r-base:first-child #mName { color: #fff; }
+.card.r-common { --rc: #ffffff; }
+/* the texture window closes with an X, its select stands out from the band */
+#texClose { font-size: 0; padding: 4px 7px; border: 0; border-image: none; background: none; color: rgba(255, 255, 255, .6); }
+#texClose > .gi { font-size: 14px; margin: 0; }
+#texClose:hover { color: rgba(255, 255, 255, .85); background: rgba(242, 63, 74, .2); border-image: none; }
+.tex-head select:not(:focus):not(:disabled) { background-color: #343d47; }
+/* the colour wells: the swatch alone */
+input[type=color] { padding: 3px !important; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type=color]::-webkit-color-swatch { border: 0; border-radius: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .45); }
+/* the parts checklist's editor: the game's chevron, not the browser's triangle */
+.ck-edit summary { list-style: none; cursor: pointer; }
+.ck-edit summary::-webkit-details-marker { display: none; }
+.ck-edit summary::marker { content: ''; }
+.ck-edit summary::before { content: ''; display: inline-block; width: 10px; height: 6px; margin-right: 7px; vertical-align: 2px; background: var(--xo-chevron) center / 10px 6px no-repeat; transform: rotate(-90deg); }
+.ck-edit[open] summary::before { transform: none; }
+/* the speed HUD: a big number, its unit small, keys as key caps, the plate's orange corner */
+.map-speed b { font-size: 20px; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, .85); }
+.map-speed b small { font-size: 11px; font-weight: 600; color: var(--xo-text2); }
+.map-speed .ms-keys { line-height: 1.8; }
+.map-speed kbd { font: 600 10px/13px var(--xo-font-ui); color: #fff; background: #1b1f25; border: 1px solid #3a414a; box-shadow: inset 0 -2px 0 #0b0e12; padding: 0 4px; }
+.map-speed::before { content: ''; position: absolute; left: -1px; top: -1px; width: 38px; height: 2px; background: var(--xo-orange-hi); box-shadow: 0 0 6px rgba(255, 102, 0, .6); pointer-events: none; }
+.map-pos { font: 600 11px/1.4 var(--xo-font-ui); font-variant-numeric: tabular-nums; color: var(--xo-text2); text-shadow: none; background: rgba(9, 11, 15, .84); border: 1px solid var(--xo-line2); box-shadow: inset 0 2px 0 #232431; padding: 4px 8px; }
+.map-pos:empty { display: none; }
+/* the status line: a diamond before the message (red, with a faint red strip, for an error) */
+#statusText::before { content: ''; display: inline-block; width: 7px; height: 7px; margin: 0 9px 1px 3px; vertical-align: middle; transform: rotate(45deg); background: var(--xo-glow); box-shadow: 0 0 4px rgba(255, 144, 19, .55); }
+#statusText.err::before { background: #f23f4a; box-shadow: 0 0 4px rgba(242, 63, 74, .6); }
+#statusText:empty::before { display: none; }
+#status:has(#statusText.err) { background: linear-gradient(90deg, rgba(242, 63, 74, .12), rgba(242, 63, 74, 0) 260px), #090b0f; }
+
+/* ---- without the game's art (no game found: the folder dialog's case) ---- */
+/* the dialog header drawn as the game's: flat burnt orange, a light top band, a dark rule ending in
+   two squares, a dotted strip, slanted hatching */
+.modal-card h2 { position: relative; padding: 14px 120px 22px 18px; text-shadow: 0 1px 2px rgba(60, 20, 0, .6);
+  background:
+    linear-gradient(#ff6600, #ff6600) 0 0 / 100% 4px no-repeat,
+    linear-gradient(#12151a, #12151a) left 0 bottom 8px / calc(100% - 36px) 2px no-repeat,
+    linear-gradient(#12151a, #12151a) right 32px bottom 8px / 2px 2px no-repeat,
+    linear-gradient(#12151a, #12151a) right 28px bottom 8px / 2px 2px no-repeat,
+    repeating-linear-gradient(90deg, #12151a 0 2px, transparent 2px 4px) right 76px bottom 3px / 34px 2px no-repeat,
+    #c45207; }
+.modal-card h2::after { content: ''; position: absolute; right: 24px; bottom: 16px; width: 38px; height: 8px; pointer-events: none;
+  background: repeating-linear-gradient(120deg, #12151a 0 1.75px, transparent 1.75px 3.5px); clip-path: polygon(4.6px 0, 100% 0, calc(100% - 4.6px) 100%, 0 100%); }
+html.skin .modal-card h2::after { content: none; }
+/* the orange buttons: their light rim along the slant too */
+.btn.primary { background: #e7a26b; box-shadow: none; clip-path: polygon(18px 0, 100% 0, 100% 100%, 0 100%); padding-left: 28px; isolation: isolate; }
+.btn.primary::before { content: ''; position: absolute; inset: 1px; z-index: -1; pointer-events: none; clip-path: polygon(17.5px 0, 100% 0, 100% 100%, .7px 100%);
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0) 30%, rgba(255, 220, 160, .18) 30.5%, rgba(255, 220, 160, .18) 37%, rgba(255, 255, 255, 0) 37.5%), linear-gradient(180deg, #bd5108 0%, #c95c08 50%, #ce6508 100%); }
+.btn.primary:hover { background: #fff; box-shadow: none; }
+.btn.primary:hover::before { background: linear-gradient(115deg, rgba(255, 255, 255, 0) 30%, rgba(255, 230, 180, .26) 30.5%, rgba(255, 230, 180, .26) 37%, rgba(255, 255, 255, 0) 37.5%), linear-gradient(180deg, #d9620f 0%, #e2701a 55%, #ef7c1c 100%); }
+.btn.primary.small { clip-path: polygon(13px 0, 100% 0, 100% 100%, 0 100%); padding-left: 20px; }
+.btn.primary.small::before { clip-path: polygon(12.5px 0, 100% 0, 100% 100%, .7px 100%); }
+.btn.primary.wide { padding-left: 30px; }
+html.skin .btn.primary::before { content: none; }
+html.skin .btn.primary, html.skin .btn.primary:hover { background: transparent; clip-path: none; }
+html.skin .btn.primary.wide { padding-left: 30px; }
+/* the classic button's ears as notches in its frame (not handles inside it) */
+.btn { border-image: linear-gradient(var(--xo-frame) 29%, var(--xo-orange) 29% 71%, var(--xo-frame) 71%) 2; }
+.btn:hover { border-image-source: linear-gradient(#fff 29%, var(--xo-cream) 29% 71%, #fff 71%); }
+.btn.on, .ref-controls .btn.on { border-image-source: linear-gradient(#fff 29%, var(--xo-orange) 29% 71%, #fff 71%); }
+.btn:active:not(:disabled), .btn.rec-btn.on { border-image: none; }
+.btn:disabled:hover { border-image-source: linear-gradient(var(--xo-frame) 29%, var(--xo-orange) 29% 71%, var(--xo-frame) 71%); }
+html.skin .btn { border-image: var(--sp-btn) 26 16 26 16 fill / 13px 8px 13px 8px stretch; }
+html.skin .btn.small { border-image-width: 12px 7px 12px 7px; }
+html.skin .btn:hover { border-image-source: var(--sp-btn-hover); }
+html.skin .btn.on, html.skin .ref-controls .btn.on { border-image-source: var(--sp-btn-preselect); }
+html.skin .btn:active:not(:disabled) { border-image-source: var(--sp-btn-pressed); }
+html.skin .btn.rec-btn.on { border-image: none; }
+html.skin .btn:disabled:hover { border-image-source: var(--sp-btn); }
+/* the cards' header bands: the game's own window header (its light band on top, the hatching at the
+   right, the rule ending in two squares and the dotted strip under it), darkened to the slate when
+   cut (skin.js TINT), the orange lead bar at its left */
+html.skin .inspector .card h3 { isolation: isolate; background: none; border-top: 0; box-shadow: inset 3px 0 0 var(--xo-orange-hi); padding: 7px 64px 12px 14px; }
+html.skin .inspector .card h3::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border: 1px solid transparent; border-image: var(--sp-header) 8 112 28 8 fill / 6px 84px 21px 6px stretch; }
+html.skin .inspector .card h3::after { content: ''; left: 0; right: auto; top: 0; bottom: 0; width: 3px; height: auto; margin: 0; background: var(--xo-orange-hi); box-shadow: none; pointer-events: none; }
+
+/* =================================================================================================
+   Review round 2
+   ================================================================================================= */
+/* Record while recording: the game's pressed button turned red (same size: the toolbar stays) */
+html.skin .btn.rec-btn.on { border: 1px solid transparent; background: transparent; box-shadow: none; border-image: var(--sp-btn-pressed) 26 16 26 16 fill / 12px 7px 12px 7px stretch; filter: hue-rotate(-26deg) saturate(1.25); }
+html.skin .btn.rec-btn.on:hover { filter: hue-rotate(-26deg) saturate(1.25) brightness(1.12); }
+/* the mouse tip hides while the garage's part card shows (it only repeats it) */
+#garageHud:not([hidden]):has(> #partCard:not([hidden])) ~ #hoverTip { visibility: hidden; }
+/* the other window headers (parts list, texture window): the game's window header too */
+html.skin .pl-main h2, html.skin .tex-head { isolation: isolate; background: none; border-top: 0; border-bottom: 0; box-shadow: none; }
+html.skin .pl-main h2 { padding: 8px 70px 12px 18px; }
+html.skin .tex-head { position: relative; padding: 6px 54px 12px 14px; }
+html.skin .pl-main h2::before, html.skin .tex-head::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; border: 1px solid transparent; border-image: var(--sp-header) 8 112 28 8 fill / 6px 84px 21px 6px stretch; }
+html.skin .pl-main h2::after, html.skin .tex-head::after { content: ''; position: absolute; left: 0; right: auto; top: 0; bottom: 0; width: 3px; height: auto; margin: 0; background: var(--xo-orange-hi); box-shadow: none; pointer-events: none; }
+/* under the mouse a header's hatching lights up: a solid white bar (skin.js: the lit copy) */
+html.skin .inspector .card h3:hover::before, html.skin .pl-main h2:hover::before, html.skin .tex-head:hover::before { border-image-source: var(--sp-header-lit, var(--sp-header)); }
+.tex-head { position: relative; padding-right: 64px; }
+html:not(.skin) .tex-head::after { content: ''; position: absolute; right: 12px; top: 50%; width: 46px; height: 8px; margin-top: -4px; background: repeating-linear-gradient(120deg, rgba(0, 0, 0, .55) 0 2px, transparent 2px 5px); pointer-events: none; }
+.tex-head select, .anim-row:not(.fx-row) select { padding-top: 2px; padding-bottom: 1px; }
+/* without the game's art: the toolbar's icon-only buttons flat (no ears) like the garage's */
+html:not(.skin) #center.compact .view-tools .btn.small:has(> .gi):not(#bDrive):not(#mDrive) { border-image: none; }
+/* a disabled check box stays visible under its dimmed label */
+.line.dim > input[type=checkbox]:disabled, .line.dim > input[type=checkbox]:disabled:hover { opacity: 1; background: #2a3139; box-shadow: inset 0 0 0 1px #59616a; cursor: default; }
+/* Save as…'s icon (a white block of its own fill) the weight of the others */
+#bSaveAs > .gi { font-size: 12px; margin-right: 6px; vertical-align: -2px; opacity: .85; }
+.gi svg [style*="fill: #fff"], .gi svg [style*="fill:#fff"] { fill: currentColor !important; }
+/* the map panel's sliders on the selects' left edge */
+#mapPanel .ar, #bFireCard .ar { grid-template-columns: minmax(0, 1fr) 112px 52px; }
+#mapPanel .ar input[type=range], #bFireCard .ar input[type=range] { margin: 0; }
+.stats:empty, .path:empty { display: none; }
+/* the minimap framed like the HUD's plates, with their orange corner tab */
+.mini-map { border-color: rgba(148, 146, 148, .87); }
+.map-hud::before { content: ''; position: absolute; z-index: 1; pointer-events: none; top: calc(var(--tools-bottom) + 6px); right: 174px; width: 38px; height: 2px; background: var(--xo-orange-hi); box-shadow: 0 0 6px rgba(255, 102, 0, .6); }
+.map-pos { right: 12px; bottom: 10px; }
+#center.compact #mapTools [data-go^=team] { min-height: 24px; }
+#center.compact #mapTools [data-go=overview] > .gi { display: none; }
+#center.compact .map-speed .ms-keys { display: flex; flex-wrap: wrap; gap: 0 4px; font-size: 0; }
+.map-speed .ms-keys i { font-size: 11px; }
+.mp-missing, .mp-kinds { padding-right: 6px; scrollbar-gutter: stable; }
+/* keys named as key caps in the Maps view and its Fire card */
+#mapEmpty p b, #mpGun ~ .hint b, #bFireCard .hint b { display: inline-block; font: 600 11px/16px var(--xo-font-ui); color: #fff; background: #1b1f25; border: 1px solid #3a414a; box-shadow: inset 0 -2px 0 #0b0e12; padding: 0 5px; margin: 0 1px; vertical-align: 1px; white-space: nowrap; }
+/* the parts column's hint: the game's tutorial line and a diamond (not a second picked row) */
+.list-hint { position: relative; margin: 0 10px 6px; padding: 6px 4px 9px 20px; color: #ffdf9c; border-bottom: 0; box-shadow: none;
+  background: linear-gradient(90deg, rgba(255, 113, 0, 0), rgba(255, 113, 0, .6) 25%, #ffffc6 50%, rgba(255, 113, 0, .6) 75%, rgba(255, 113, 0, 0)) left bottom 1px / 100% 2px no-repeat, linear-gradient(90deg, rgba(255, 113, 0, 0), rgba(255, 113, 0, .14) 50%, rgba(255, 113, 0, 0)) left bottom / 100% 4px no-repeat; }
+.list-hint::before { content: ''; position: absolute; left: 5px; top: 50%; width: 7px; height: 7px; margin-top: -5px; transform: rotate(45deg); background: var(--xo-glow); box-shadow: 0 0 4px rgba(255, 144, 19, .55); pointer-events: none; }
+/* the busy diamond: one lit corner that hops round (it visibly turns) */
+.spinner { border-color: rgba(255, 144, 19, .28); border-top-color: var(--xo-cream); border-right-color: var(--xo-glow); }
+/* the colour panel under its thumbnail, at the card's width; the swatches as the game's colour tiles */
+.tex { align-items: start; }
+.tex .thumb { margin-top: 2px; }
+.tex .adjust { margin-left: -60px; }
+.swatches { gap: 2px; }
+.swatches button { box-sizing: border-box; width: 24px; height: 24px; border: 5px solid var(--xo-tile); border-radius: 0; outline: 0; box-shadow: none; }
+.swatches button:hover { outline: 0; border-color: var(--xo-tile-hi); box-shadow: 0 0 0 1px #606369; }
+.swatches button:focus-visible { box-shadow: 0 0 0 1px var(--xo-cream); }
+.swatches button:active { border-color: #232931; box-shadow: 0 0 0 1px var(--xo-cream); }
+/* Colours… open: the tertiary button pressed; the texture buttons on one line */
+html.skin .tex:has(.adjust) .acts [data-act=adjust] { border-image-source: var(--sp-tert-pressed); color: var(--xo-cream); }
+.tex:has(.adjust) .acts [data-act=adjust] { border-color: var(--xo-cream); color: var(--xo-cream); }
+.tex .acts { gap: 3px; }
+html.skin .tex .acts button { padding: 0 4px; white-space: nowrap; }
+/* the builder's lists: grey at rest, white when they matter (as All files and Maps) */
+.brow .bn, .ck-row .cn, .ref-row { color: var(--xo-text2); }
+.brow:not(.missing):hover .bn, .brow.sel .bn, .ck-row.go:not(.done):hover .cn, .ref-row:hover, .ref-row.on { color: #fff; }
+.ck-row:not(.go) { align-items: start; }
+.ck-row:not(.go) > input[type=checkbox] { margin-top: 2px; }
+.ck-row:not(.go) > .cq { margin-top: 1px; }
+/* the selected part's name in its rarity */
+#bSelCard #bSelName { color: var(--rc, #fff); }
+#bSelCard.r-none #bSelName, #bSelCard.r-base #bSelName { color: #fff; }
+/* no free energy: grey */
+.eb-cell.big.zero .gi { color: var(--xo-text2); }
+#bGroups .gi, #mWarnings .gi { font-size: 14px; vertical-align: -3px; margin: 0 4px 0 -2px; }
+/* the empty views' diamond lit like the game's tutorial badge */
+.empty-ico { background: rgba(13, 16, 21, .8); border-color: var(--xo-cream); box-shadow: 0 0 6px 1px rgba(255, 125, 8, .5), inset 0 0 0 2px rgba(156, 81, 24, .85), inset 0 0 10px 3px rgba(255, 120, 20, .35); }
+/* the dialog's header as the window's top edge (over the card's frame); its paths as fields */
+.modal-card h2 { margin: -1px -1px 14px; }
+.modal-card code { background: var(--xo-field); box-shadow: inset 0 -2px 0 var(--xo-field-line); padding: 1px 6px 2px; }
+/* All files: the game's rules between rows */
+.row-item:not(.card)::after { content: ''; position: absolute; left: 6px; right: 4px; bottom: 0; height: 1px; background: #1b1f24; pointer-events: none; }
+/* a disabled orange button keeps its disabled look under the mouse */
+html.skin .btn.primary:disabled:hover { border-image-source: var(--sp-act); filter: grayscale(1) brightness(.6); }
+.btn.primary:disabled:hover { background: #e7a26b; filter: grayscale(1) brightness(.6); }
+.btn.primary:disabled:hover::before { background: linear-gradient(180deg, #bd5108 0%, #c95c08 50%, #ce6508 100%); }
+/* without the art: the wide orange button's light stripe at its slanted end (not behind its icon) */
+html:not(.skin) .btn.primary.wide::before { background: linear-gradient(115deg, rgba(255, 255, 255, 0) 4%, rgba(255, 220, 160, .18) 4.5%, rgba(255, 220, 160, .18) 9%, rgba(255, 255, 255, 0) 9.5%), linear-gradient(180deg, #bd5108 0%, #c95c08 50%, #ce6508 100%); }
+html:not(.skin) .btn.primary.wide:hover::before { background: linear-gradient(115deg, rgba(255, 255, 255, 0) 4%, rgba(255, 230, 180, .26) 4.5%, rgba(255, 230, 180, .26) 9%, rgba(255, 255, 255, 0) 9.5%), linear-gradient(180deg, #d9620f 0%, #e2701a 55%, #ef7c1c 100%); }
+
+/* =================================================================================================
+   The rest in the game's look: the window's title bar, tooltips, drop-down lists, questions, cursor
+   ================================================================================================= */
+/* the top bar is the window's title bar (no Windows caption): drag it, double-click it, its own
+   buttons; what is clickable in it stays clickable */
+#topbar { app-region: drag; -webkit-app-region: drag; }
+#topbar button, #topbar input, #topbar select, #topbar a, #topbar .ver-tag { app-region: no-drag; -webkit-app-region: no-drag; }
+.winbtns { align-self: stretch; display: flex; margin-right: -12px; }
+.winbtn { width: 46px; border: 0; border-radius: 0; background: transparent; color: var(--xo-text2); display: grid; place-items: center; padding: 0; }
+.winbtn .gi { font-size: 15px; }
+.winbtn:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.winbtn:active { background: rgba(255, 255, 255, .14); }
+.winbtn.close:hover { background: linear-gradient(180deg, #c42a1f, #8f1a12); color: #fff; }
+.max-glyph { width: 11px; height: 11px; border: 1.6px solid currentColor; position: relative; }
+html.maximized .max-glyph { width: 9px; height: 9px; transform: translate(-1px, 1px); }
+html.maximized .max-glyph::after { content: ''; position: absolute; left: 1px; top: -4px; width: 9px; height: 9px; border-top: 1.6px solid currentColor; border-right: 1.6px solid currentColor; }
+
+/* tooltips: the game's (black, a pale frame, a white tab in its corner; its first line a header) */
+.xo-tip { position: fixed; z-index: 100; max-width: 320px; padding: 6px 10px 7px; pointer-events: none; white-space: pre-line;
+  background: rgba(0, 0, 0, .93); border: 1px solid rgba(206, 207, 206, .5); box-shadow: 0 6px 16px rgba(0, 0, 0, .55);
+  color: var(--xo-text2); font: 12px/1.4 var(--xo-font); }
+.xo-tip::before { content: ''; position: absolute; left: -1px; top: -1px; width: 4px; height: 4px; background: #fff; }
+.xo-tip > div:only-child { color: #fff; }
+.xo-tip-head { color: #fff; font-family: var(--xo-font-ui); font-weight: 600; font-size: 12.5px; margin-bottom: 2px; }
+.xo-tip[hidden] { display: none; }
+
+/* drop-down lists: the game's list (dark, rows lit from the left under the mouse, the picked one orange) */
+.xo-drop { position: fixed; z-index: 90; overflow-y: auto; padding: 3px 0; background: #12161b; border: 1px solid var(--xo-line2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .6), inset 0 2px 0 #232431; font: 13px var(--xo-font); color: var(--xo-text2); }
+.xo-drop-item { position: relative; padding: 5px 14px 5px 12px; white-space: nowrap; cursor: pointer; }
+.xo-drop-item.in-group { padding-left: 20px; }
+.xo-drop-item.hi { background: var(--xo-hover-row); color: #fff; }
+.xo-drop-item.on { background: var(--xo-sel-row); color: #fff; }
+.xo-drop-item.on.hi { filter: brightness(1.12); }
+.xo-drop-item.off { opacity: .4; cursor: default; }
+.xo-drop-group { padding: 7px 12px 3px; font: 600 11px var(--xo-font-ui); text-transform: uppercase; letter-spacing: .08em; color: #8c939b; border-top: 1px solid rgba(255, 255, 255, .06); }
+.xo-drop-group:first-child { border-top: 0; }
+.xo-drop-item + .xo-drop-item::after, .xo-drop-group + .xo-drop-item::after { content: none; }
+
+/* the yes / no question: the game's dialog window */
+.xo-ask { z-index: 95; }
+.xo-ask .modal-card { width: 440px; }
+.xo-ask .modal-card p { margin: 0 0 16px; color: var(--xo-text3); line-height: 1.5; }
+.xo-ask .row.right { gap: 8px; }
+
+/* the game's own arrow cursor (texts keep the text cursor; the 3D view sets its own) */
+html.skin, html.skin body { cursor: var(--sp-cursor) 2 2, default; }
+html.skin :is(button, a, select, label, summary, .card, .row-item, .map-row, .brow, .ck-row.go, .cat-row .cat, .cat-row .more, .cat-subs .sub, .pl-tile, .mat-head, .tex .thumb, .xo-drop-item, input[type=checkbox], input[type=range], input[type=color]) { cursor: var(--sp-cursor) 2 2, pointer; }
+
+/* Donations, Bug report and the crash dialog (support.js): the game's dialog window, wider */
+.support-modal { z-index: 90; }
+.support-card { position: relative; width: min(680px, calc(100vw - 48px)); max-height: calc(100vh - 64px); display: flex; flex-direction: column; }
+.support-card > h2 { flex: none; }
+.support-body { overflow: auto; padding: 0 18px 4px; }
+.support-body p { margin: 0 0 12px; line-height: 1.5; color: var(--xo-text3); }
+.support-body p.lead { color: #fff; font-size: 14px; }
+.support-body .hint { color: var(--xo-text2); font-size: 12.5px; }
+.support-body .hint.fine { margin-top: 14px; font-size: 11.5px; opacity: .8; }
+.support-body .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; padding: 0; }
+.support-body .row.right { justify-content: flex-end; margin: 16px 0 6px; }
+.support-sec { margin: 0 0 16px; padding: 12px 14px 2px; background: rgba(255, 255, 255, .025); border: 1px solid var(--xo-line2); }
+.support-sec h3 { margin: 0 0 8px; font-family: var(--xo-font-ui); font-size: 14px; font-weight: 600; color: #fff; }
+.support-sec h3::before { content: ''; display: inline-block; width: 3px; height: 12px; margin-right: 8px; background: var(--accent); vertical-align: -1px; }
+.modal-x { position: absolute; top: 9px; right: 14px; width: 30px; height: 30px; padding: 0; border: 0; background: none; color: #fff; font-size: 22px; line-height: 28px; opacity: .8; z-index: 1; }
+.modal-x:hover { opacity: 1; color: var(--xo-cream); }
+.donate-links { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 14px; }
+.donate-link { min-width: 180px; padding: 9px 20px; font-size: 14px; }
+.support-note { margin: 4px 0 0; padding: 10px 14px 1px; border-left: 3px solid var(--accent); background: rgba(255, 122, 26, .06); }
+.support-note a { color: var(--accent2); }
+pre.support-details { max-height: 260px; overflow: auto; margin: 0 0 12px; padding: 10px 12px; background: #090b0e; border: 1px solid var(--xo-line2); color: #d9dcdf; font: 11.5px/1.45 Consolas, "Cascadia Mono", monospace; white-space: pre-wrap; word-break: break-word; user-select: text; }
+.problem-list { list-style: none; margin: 0 0 12px; padding: 0; font-size: 12.5px; }
+.problem-list li { display: flex; gap: 10px; padding: 4px 0; border-top: 1px solid rgba(255, 255, 255, .06); }
+.problem-list li:first-child { border-top: 0; }
+.problem-list .when { flex: none; width: 128px; color: var(--xo-text2); }
+.problem-list .what { flex: 1; color: var(--xo-text3); overflow-wrap: anywhere; }
+.problem-list .state { flex: none; color: #7fd47f; }
+.support-state { min-height: 1.4em; color: #fff; }
+#crashDialog .support-card { width: min(620px, calc(100vw - 48px)); }
+#crashDialog .chk { display: inline-flex; margin: 0 0 12px; }
+/* Bug report in the top bar: a small orange diamond while a problem waits to be reported */
+.mainmode button.alert::after { content: ''; position: absolute; top: 9px; right: 10px; width: 6px; height: 6px; background: var(--accent); transform: rotate(45deg); box-shadow: 0 0 6px var(--accent); }
+/* the paint picker (paints.js) as the game's dye tiles: square, framed, the picked one lit orange */
+.pp-chip { border-radius: 0; border: 1px solid var(--xo-line2); box-shadow: inset 0 0 0 3px var(--xo-tile); }
+.pp-search { border-radius: 0; }
+.pp-grid button { border-radius: 0; border: 3px solid var(--xo-tile); background: #0b0e12; }
+.pp-grid button:hover { border-color: var(--xo-tile-hi); box-shadow: 0 0 0 1px #606369; }
+.pp-grid button.on { border-color: var(--xo-orange-hi); box-shadow: 0 0 0 1px var(--xo-cream), 0 0 6px rgba(255, 144, 19, .5); }
+.pp-grid.pp-tab-chameleon button { border-width: 2px; }
+.pp-rn { color: var(--xo-text2); }
+.pp-ar { font-size: 13px; color: var(--xo-text2); }
+.pp-ar input[type=range] { margin: 0; }
+.brow .bp { border-radius: 0; border-color: rgba(255, 255, 255, .4); }
+.pp-mats button { border-radius: 0; border: 2px solid var(--xo-tile); background: #0b0e12; color: var(--xo-text2); font-family: var(--xo-font-ui); }
+.pp-mats button:hover { border-color: var(--xo-tile-hi); box-shadow: 0 0 0 1px #606369; color: #fff; }
+.pp-mats button.on { border-color: var(--xo-orange-hi); box-shadow: 0 0 0 1px var(--xo-cream), 0 0 6px rgba(255, 144, 19, .5); color: #fff; }
+.pp-chip.shiny { box-shadow: inset 0 0 0 3px var(--xo-tile), inset -7px -9px 14px rgba(0, 0, 0, .4), inset 6px 6px 10px rgba(255, 255, 255, .45); }

@@ -1,0 +1,12 @@
+# Build leftovers: the compiler's files there hold the full path of the PC they were built on
+# (C:\Users\<name>\...). build.cmd makes them again.
+build/
+# What build.cmd makes in the top folder (releases carry them: tools/package.ps1 -> dist/)
+/Grimcold.exe
+/libzstd.dll
+/dist/
+# crosscalc.net's item table and the old game data that tools/stats/make_stats.py reads: not ours to
+# publish (ui/stats.json, built from them, is)
+/tools/stats/*.json
+# the screenshots' full-size originals (the README shows the JPEG copies)
+/screenshots/*.png

@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grimcold</title>
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="skin.css">
+  <script type="importmap">
+    { "imports": { "three": "./lib/three/three.module.min.js", "three/addons/": "./lib/three/" } }
+  </script>
+</head>
+<body>
+  <header id="topbar">
+    <img src="icon.png" alt="" class="logo">
+    <span class="title">Grimcold</span>
+    <button id="gameBtn" class="game" title="Crossout game folder (read-only)">
+      <span class="dot" id="gameDot"></span><span id="gameLabel">Looking for Crossout…</span>
+    </button>
+    <span id="gameVer" class="ver-tag" hidden></span>
+    <button id="reloadBtn" class="icon-btn" title="Re-read the game archives (after a game update)"><i class="gi" data-gi="icn_reload"></i></button>
+    <div class="spacer"></div>
+    <div class="mainmode" role="tablist" id="mainMode">
+      <button role="tab" data-view="part" class="on" title="Look at one part, recolour it, export it">3D Viewer</button>
+      <button role="tab" data-view="build" title="Put parts together into a vehicle">Vehicle Builder</button>
+      <button role="tab" data-view="map" title="Fly through the game's maps, export them">Maps</button>
+      <button id="donationsBtn" title="Support the development of Grimcold">Donations</button>
+      <button id="bugReportBtn" title="Report a bug: the GitHub form, an anonymous technical report, the details to copy">Bug report</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="winbtns" id="winBtns">
+      <button id="winMin" class="winbtn" title="Minimize"><i class="gi" data-gi="icn_minus"></i></button>
+      <button id="winMax" class="winbtn" title="Maximize / restore"><span class="max-glyph"></span></button>
+      <button id="winClose" class="winbtn close" title="Close"><i class="gi" data-gi="icn_cancel"></i></button>
+    </div>
+  </header>
+
+  <main id="layout" class="cards">
+    <aside id="left">
+      <!-- the parts menu (the game's categories), the whole height of the left side -->
+      <div id="menuCol" class="menu-col">
+        <div id="cats" class="cats"></div>
+      </div>
+      <!-- the parts of what is picked, as the game's cards (All files: the files) -->
+      <div id="partsCol" class="parts-col">
+        <div class="modes" id="modesBar" role="tablist">
+          <button role="tab" data-mode="parts" class="on">Parts</button>
+          <button role="tab" data-mode="files">All files</button>
+        </div>
+        <div class="search-row" id="searchRow">
+          <input id="search" type="search" placeholder="Search parts (Ctrl+F)" spellcheck="false" autocomplete="off">
+        </div>
+        <div id="listHint" class="list-hint" hidden>Click a part to place it in the build.</div>
+        <div id="listWrap" class="list-wrap">
+          <div id="list" class="list" tabindex="0"></div>
+        </div>
+        <div id="filesBar" class="files-bar" hidden>
+          <span id="filesCount"></span>
+          <button id="extractBtn" class="btn small primary" disabled><i class="gi" data-gi="icn_download_arrow"></i>Extract checked…</button>
+        </div>
+      </div>
+      <!-- Maps mode: the game's maps -->
+      <div id="mapSide" class="map-side" hidden>
+        <div class="search-row">
+          <input id="mapSearch" type="search" placeholder="Search maps (Ctrl+F)" spellcheck="false" autocomplete="off">
+        </div>
+        <div id="mapList" class="map-list"></div>
+      </div>
+    </aside>
+
+    <section id="center">
+      <!-- reference picture (Vehicle Builder): under the 3D view, or over it ("front") -->
+      <div id="refLayer" class="ref-layer" hidden><img id="refImg" alt="" draggable="false"></div>
+      <canvas id="view"></canvas>
+      <div id="viewTools" class="view-tools" hidden>
+        <label>LOD <select id="lodSel"></select></label>
+        <label id="skinWrap" hidden>Skin <select id="skinSel"></select></label>
+        <span class="sep"></span>
+        <label class="chk"><input type="checkbox" id="optTextures" checked> Textures</label>
+        <label class="chk"><input type="checkbox" id="optWire"> Wireframe</label>
+        <label class="chk" title="The points where other parts weld on (white boxes, as in the garage)"><input type="checkbox" id="optSlots" checked> Weld points</label>
+        <span class="grp">
+          <label class="chk" id="arcWrap" hidden title="Where the weapon can aim: how far it turns and tilts (from the game's own aiming limits)"><input type="checkbox" id="optArcs" checked> Firing arc</label>
+          <label class="range" id="arcSizeWrap" hidden title="Size of the firing arc. It scales with each weapon's size, so one setting suits every weapon (the builder's arcs too)."><input type="range" id="arcSize" min="0.4" max="3" step="0.05" value="1.2"><span class="val" id="arcSizeVal"></span></label>
+          <label class="chk" id="arcConesWrap" hidden title="The cones that close the firing arc above its highest and below its lowest tilt (the builder's arcs too)"><input type="checkbox" id="arcCones" checked> Cones</label>
+        </span>
+        <label class="chk"><input type="checkbox" id="optPivots"> Pivots</label>
+        <label class="chk"><input type="checkbox" id="optGrid" checked> Grid</label>
+        <label class="chk" title="Soft shadows and ambient occlusion"><input type="checkbox" id="optShadows" checked> Shadows</label>
+        <span class="sep"></span>
+        <select id="lightSel" class="light-sel" title="Lighting">
+          <option value="outdoor">Outdoor light</option>
+          <option value="studio">Studio light</option>
+        </select>
+        <select id="bgSel" title="Background">
+          <option value="crossout">Crossout</option>
+          <option value="dark">Dark</option>
+          <option value="studio">Studio</option>
+          <option value="light">Light</option>
+        </select>
+        <button id="frameBtn" class="btn small" title="Frame the model (F)"><i class="gi" data-gi="build/icn_carcenter"></i>Frame</button>
+        <button id="shotBtn" class="btn small" title="Save a screenshot of the view">Screenshot</button>
+        <button id="recBtn" class="btn small rec-btn" title="Record the view as a video clip with the game's sounds (MP4); click again to stop and save it. At most 3 minutes.">Record</button>
+      </div>
+      <div id="buildTools" class="view-tools" hidden>
+        <button id="bQuickSave" class="btn small save-btn" title="Save the build (Ctrl+S)"><span class="unsaved" aria-hidden="true"></span><i class="gi" data-gi="icn_save_discette"></i>Save</button>
+        <span class="sep"></span>
+        <button id="bUndo" class="btn small" title="Undo (Ctrl+Z)"><i class="gi" data-gi="build/icn_undo"></i>Undo</button>
+        <button id="bRedo" class="btn small" title="Redo (Ctrl+Y)"><i class="gi" data-gi="build/icn_redo"></i>Redo</button>
+        <span class="sep"></span>
+        <span class="grp">
+          <button id="bAR" class="gbtn on" title="Augmented reality (F), as in the garage: the vehicle's weld points (white boxes) and the weapons' firing arcs"><i class="gi" data-gi="ar"></i><span class="lbl">Aug. reality</span></button>
+          <label class="range" id="bArcSizeWrap" title="Size of the weapons' firing arcs: each scales with its own weapon (the same setting as in the 3D Viewer)">Arcs <input type="range" id="bArcSize" min="0.4" max="3" step="0.05" value="1.2"><span class="val" id="bArcSizeVal"></span></label>
+          <label class="chk" id="bArcConesWrap" title="The cones that close the firing arcs above their highest and below their lowest tilt (the same setting as in the 3D Viewer)"><input type="checkbox" id="bArcCones" checked> Cones</label>
+        </span>
+        <button id="bLift" class="gbtn" title="Lift the car (C) to see and build underneath"><i class="gi" data-gi="lift"></i><span class="lbl">Lift car</span></button>
+        <button id="bPartsList" class="gbtn" title="Parts list (H): every part of the vehicle with the vehicle's stats"><i class="gi" data-gi="list"></i><span class="lbl">Parts list</span></button>
+        <span class="sep"></span>
+        <label class="chk" title="Place a mirrored copy on the other side (M)"><input type="checkbox" id="bSym"> Symmetry</label>
+        <div class="seg small" id="bGizmo" title="Handles (arrows) on the selected part. Off: move parts by grabbing and dragging them, as in the garage">
+          <button data-g="off" class="on"><i class="gi" data-gi="build/icn_objectpick"></i>No handles</button>
+          <button data-g="translate"><i class="gi" data-gi="build/icn_objectmove"></i>Move</button>
+          <button data-g="rotate"><i class="gi" data-gi="build/icn_objectrotateclockwise"></i>Rotate</button>
+        </div>
+        <span class="sep"></span>
+        <label class="chk"><input type="checkbox" id="bTextures" checked> Textures</label>
+        <label class="chk"><input type="checkbox" id="bGrid" checked> Grid</label>
+        <label class="chk" title="Soft shadows and ambient occlusion"><input type="checkbox" id="bShadows" checked> Shadows</label>
+        <span class="sep"></span>
+        <select id="bLightSel" class="light-sel" title="Lighting">
+          <option value="outdoor">Outdoor light</option>
+          <option value="studio">Studio light</option>
+        </select>
+        <button id="bFrame" class="btn small" title="Frame the build (Home)"><i class="gi" data-gi="build/icn_carcenter"></i>Frame</button>
+        <button id="bShot" class="btn small">Screenshot</button>
+        <button id="bRec" class="btn small rec-btn" title="Record the view as a video clip with the game's sounds (MP4); click again to stop and save it. At most 3 minutes.">Record</button>
+        <button id="bDrive" class="btn small" title="Take the vehicle for a drive on the map last opened in Maps (else the bridge), from team 1's spawn: W A S D, Space to brake, click the view to aim with the mouse, V or the left button fires, H the horn, Esc to fly"><i class="gi" data-gi="icn_tastdrive"></i>Test drive</button>
+      </div>
+      <div id="mapTools" class="view-tools" hidden>
+        <button class="btn small" data-go="team1" title="Behind team 1's spawn, looking at team 2"><i class="gi" data-gi="icn_car_respawn"></i>Team 1</button>
+        <button class="btn small" data-go="team2" title="Behind team 2's spawn, looking at team 1"><i class="gi" data-gi="icn_car_respawn"></i>Team 2</button>
+        <button class="btn small" data-go="overview" title="High above the middle of the map"><i class="gi" data-gi="build/icn_cameraup"></i>Overview</button>
+        <button id="mDrive" class="btn small" title="Drive the Vehicle Builder's vehicle on this map, from where the view looks at the ground: W A S D, Space to brake, drag to look around, V fires its guns; Esc or this button again to fly"><i class="gi" data-gi="icn_steering"></i>Drive</button>
+        <span class="sep"></span>
+        <label class="chk"><input type="checkbox" id="mTextures" checked> Textures</label>
+        <label class="chk" title="Sun shadows and ambient occlusion"><input type="checkbox" id="mShadows" checked> Shadows</label>
+        <span class="sep"></span>
+        <button id="mShot" class="btn small" title="Save a screenshot of the view">Screenshot</button>
+        <button id="mRec" class="btn small rec-btn" title="Record the view as a video clip with the game's sounds (MP4); click again to stop and save it. At most 3 minutes.">Record</button>
+      </div>
+      <!-- Maps HUD: minimap (click to fly there), camera speed, keys -->
+      <div id="mapHud" class="map-hud" hidden>
+        <canvas id="miniMap" class="mini-map" width="220" height="220" title="Click or drag to fly there"></canvas>
+        <div id="mapSpeed" class="map-speed"></div>
+        <div id="mapKeys" class="garage-keys map-keys"></div>
+        <div id="mapPos" class="map-pos"></div>
+      </div>
+      <div id="mapEmpty" class="empty" hidden>
+        <span class="empty-ico"><i class="gi" data-gi="icn_gameinfo_map"></i></span>
+        <h1>Pick a map on the left</h1>
+        <p>Every map in your Crossout install: terrain, buildings, trees, water. Fly through it with
+          <b>W A S D</b>, <b>Space</b> and <b>Shift</b>; the keys <b>1</b> to <b>9</b> set the camera speed.
+          Export a map for Blender on the right.</p>
+      </div>
+      <!-- the garage HUD (Vehicle Builder): energy bar, card of the part under the cursor -->
+      <div id="garageHud" class="garage-hud" hidden>
+        <div id="energyBar" class="energy-bar"></div>
+        <div id="partCard" class="part-card" hidden></div>
+      </div>
+      <div id="hoverTip" class="hover-tip" hidden></div>
+      <div id="empty" class="empty">
+        <div id="noModel" class="welcome">
+          <span class="empty-ico"><i class="gi" data-gi="icn_cubes_parts"></i></span>
+          <h1>Pick a part on the left</h1>
+          <p>All Crossout parts in one place.</p>
+          <ul class="welcome-tiles">
+            <li><i class="gi" data-gi="icn_hologram"></i><b>Look</b><span>See it from every angle, in every skin</span></li>
+            <li><i class="gi" data-gi="module/icn_module_custom_skin"></i><b>Paint</b><span>Change its colours or use your own textures</span></li>
+            <li><i class="gi" data-gi="icn_download_arrow"></i><b>Export</b><span>Save it for Blender as GLB, glTF or OBJ</span></li>
+            <li><i class="gi" data-gi="build/icn_garage"></i><b>Build</b><span>Put parts together into a whole vehicle</span></li>
+          </ul>
+          <p class="welcome-search"><span>Press</span><i class="kc wide" data-key="ctrl"></i><i class="kc" data-key="f"></i><span>to search, for example <b>harvester</b> or <b>wheel</b></span></p>
+        </div>
+      </div>
+      <div id="buildEmpty" class="empty" hidden>
+        <span class="empty-ico"><i class="gi" data-gi="build/icn_garage"></i></span>
+        <h1>Your build is empty</h1>
+        <p>Pick a frame or a cabin on the left, then click on the grid to drop it.
+          Parts snap to each other's connection points on Crossout's 0.3 m grid.</p>
+      </div>
+      <div id="buildHint" class="garage-keys" hidden></div>
+      <button id="keysBtn" class="keys-btn" hidden title="Show or hide the list of keys"><i class="gi" data-gi="build/icn_questioncircle"></i>Keys</button>
+      <div id="partsList" class="parts-list" hidden>
+        <div class="pl-main" id="plMain"></div>
+        <div class="pl-side">
+          <div class="vs" id="plStats"></div>
+          <button id="plClose" class="btn small" title="Close (H or Esc)"><i class="gi" data-gi="icn_cancel"></i>Close</button>
+        </div>
+      </div>
+      <div id="texPreview" class="tex-preview" hidden>
+        <div class="tex-head"><span id="texTitle"></span>
+          <select id="texView">
+            <option value="opaque">Colour</option>
+            <option value="rgb">Colour + alpha</option>
+            <option value="alpha">Alpha</option>
+            <option value="r">Red</option>
+            <option value="g">Green</option>
+            <option value="b">Blue</option>
+            <option value="normal">As normal map</option>
+          </select>
+          <button id="texPng" class="btn small"><i class="gi" data-gi="icn_download_arrow"></i>Save PNG…</button>
+          <button id="texDds" class="btn small"><i class="gi" data-gi="icn_download_arrow"></i>Save DDS…</button>
+          <button id="texClose" class="btn small" title="Close (Esc)"><i class="gi" data-gi="icn_cancel"></i>Close</button>
+        </div>
+        <div class="tex-body"><img id="texImg" alt=""></div>
+      </div>
+      <div id="busy" class="busy" hidden><div class="spinner"></div><span id="busyText">Loading…</span></div>
+    </section>
+
+    <aside id="right" hidden>
+      <!-- 3D viewer inspector -->
+      <div id="inspector" class="inspector" hidden>
+        <section class="card">
+          <div class="title-row">
+            <h2 id="mName"></h2>
+            <button id="mRename" class="icon-btn" title="Name this part (your own name for it)"><i class="gi" data-gi="icn_edit"></i></button>
+          </div>
+          <input id="mNameEdit" class="name-edit" type="text" spellcheck="false" hidden placeholder="In-game name, e.g. Sprinter">
+          <div class="file-name" id="mFile" hidden></div>
+          <div class="file-name with-line" id="mWith" hidden></div>
+          <div class="path" id="mPath" title="Click to copy"></div>
+          <dl class="stats" id="mStats"></dl>
+          <div id="mWarnings" class="warnings"></div>
+          <div class="two-btn">
+            <button id="addToBuild" class="btn" title="Switch to the Vehicle Builder and place this part"><i class="gi" data-gi="icn_plus"></i>Add to build</button>
+            <button id="quickExport" class="btn primary" title="Export this part with the options in the Export card below (GLB, glTF or OBJ)"><i class="gi" data-gi="icn_download_arrow"></i>Export…</button>
+          </div>
+        </section>
+        <section class="card" id="animCard" hidden>
+          <h3>Animation</h3>
+          <div id="animControls">
+            <div class="anim-row">
+              <select id="animSel" title="What the part is doing"></select>
+              <button id="animPlay" class="btn small" title="Play / pause">Pause</button>
+              <select id="animSpeed" title="Speed">
+                <option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option><option value="2">2×</option>
+              </select>
+            </div>
+            <div id="animPoses" class="anim-poses"></div>
+            <label class="chk line" id="animSweepWrap"><input type="checkbox" id="animSweep"> Move these on their own</label>
+            <label class="chk line" id="animLookWrap" title="The gun turns to face you as you move the view around it, as far as it can turn. Moving its aim sliders yourself turns this off."><input type="checkbox" id="animLook"> Look at me</label>
+            <div class="anim-row fx-row" id="fxRow" hidden title="The muzzle flash, smoke and sparks the game shows when this gun fires: its own effect files, played at the gun's fire points while a Fire activity plays. Which effect a gun uses sits in the game's encrypted data, so it is matched by name; pick another one here.">
+              <span>Firing effects</span>
+              <select id="fxSel"></select>
+            </div>
+            <div class="anim-row fx-row" id="fxTargetRow" hidden title="Where the gun's rounds land while a Fire activity plays: on the game's training-ground target (the cut-out pickup with a bullseye) stood that far down-range, or only on the ground (aim the gun down to see those). Each lands with the game's hit effect for that surface.">
+              <span>Shots hit</span>
+              <select id="fxTarget">
+                <option value="10">a target 10 m out</option>
+                <option value="25">a target 25 m out</option>
+                <option value="50">a target 50 m out</option>
+                <option value="0">only the ground</option>
+              </select>
+            </div>
+            <div class="anim-row fx-row" id="fxEveryRow" hidden title="The shot timer: seconds from one shot to the next while a Fire activity plays (1, 6, 13 …); between shots the gun holds still. Empty: as in the game: a gun with a reload time fires once per reload (a rocket pod a salvo, a rocket from each tube), one that fires non-stop as fast as its Fire animation. The same setting fires the builder's vehicle and Maps' gun (V).">
+              <span>Shot every</span>
+              <input type="number" id="fxEvery" class="every" min="0" max="600" step="any" placeholder="game pace"><span class="val">s</span>
+            </div>
+            <div class="anim-row fx-row" id="fxSoundRow" hidden title="The game's own sounds, from its sound banks: this gun's shots (a minigun's motor and a flamethrower's roar while it fires), its rounds' hits and blasts, where they happen. Which sounds a gun uses sits in the game's encrypted data, so they are matched by name.">
+              <span>Sound</span>
+              <input type="range" id="fxVolume" min="0" max="100" step="1" value="70"><span class="val" id="fxVolumeVal">70%</span>
+            </div>
+          </div>
+          <div id="heatRow" class="anim-poses" hidden>
+            <div class="ar"><span title="How hot the barrels glow. In the garage they are cold; firing heats them up.">Barrel heat</span>
+              <input type="range" id="heatSlider" min="0" max="100" step="1" value="0"><span class="val" id="heatVal">0%</span></div>
+          </div>
+          <div class="hint" id="animHint">The game's own animations. The "jiggle" wobble and physics are not simulated. Exports show the part posed as you see it here (Pose as shown); with Skeleton &amp; animations the clips go along too.</div>
+          <div class="hint" id="heatHint" hidden>Barrels glow while the weapon fires, as in the game. The heat you set here is also used for the export.</div>
+        </section>
+        <section class="card" id="vPaintCard">
+          <h3>Paint</h3>
+          <p class="hint">The game's paints: colours, patterns and chameleon paints, where the part's paint mask lets them show (as painting it in the garage). Exports have it baked into the textures.</p>
+          <p class="hint warn-hint" id="vPaintNoMask" hidden>This part has no paint mask: paint does not show on it, in the game either.</p>
+          <div id="vPaintPicker"></div>
+          <div class="row"><button id="vPaintOff" class="btn small" disabled>Remove paint</button></div>
+        </section>
+        <section class="card">
+          <h3>Materials &amp; textures</h3>
+          <div id="materials"></div>
+        </section>
+        <section class="card" id="lookCard">
+          <h3>Look</h3>
+          <p class="hint">Colour edits and replaced textures are previewed here and baked into the export.
+            They never touch the game files.</p>
+          <div class="row">
+            <button id="lookSave" class="btn small"><i class="gi" data-gi="icn_save_discette"></i>Save look…</button>
+            <button id="lookOpen" class="btn small">Open look…</button>
+            <button id="lookReset" class="btn small">Reset all</button>
+          </div>
+        </section>
+        <section class="card">
+          <h3>Export</h3>
+          <div class="seg" id="fmtSeg">
+            <button data-fmt="glb" class="on" title="One self-contained file, textures inside. Best for Blender.">GLB</button>
+            <button data-fmt="gltf" title="glTF with separate .bin and PNG files">glTF</button>
+            <button data-fmt="obj" title="Wavefront OBJ + MTL + PNG">OBJ</button>
+          </div>
+          <label class="line">LOD
+            <select id="expLod"><option value="cur">Current</option><option value="all">All LODs (separate objects)</option></select>
+          </label>
+          <label class="chk line"><input type="checkbox" id="expTextures" checked> Textures (PNG)</label>
+          <label class="line" title="The game's own smaller sizes (its mipmaps), for lighter files">Textures up to <select id="expMaxTex"><option value="0" selected>Full size</option><option value="2048">2048 px</option><option value="1024">1024 px</option><option value="512">512 px</option></select></label>
+          <label class="chk line"><input type="checkbox" id="expDds"> Original textures as DDS too</label>
+          <label class="chk line"><input type="checkbox" id="expExtra"> Extra maps (gloss, ambient occlusion)</label>
+          <label class="chk line" title="The game's baked shadows (ambient occlusion) in the material. Game engines use them for softer shadows in corners. Cinema 4D turns them into an Overall Tint that makes the whole part much darker, so leave this off for Cinema 4D. Blender does not use them either way."><input type="checkbox" id="expAo"> Ambient occlusion in the material</label>
+          <label class="chk line" title="Cinema 4D drops any glTF mesh that has more than one material, so the part goes missing. With this on, each material is its own object under the part. Turn it off for one object per part (Blender and Unreal take both). GLB / glTF only."><input type="checkbox" id="expSplit" checked> One object per material (for Cinema 4D)</label>
+          <label class="chk line" id="expPoseWrap" hidden title="The part as the viewer shows it now: aim, steering, suspension, the moment of the animation playing. Off: the pose the model was made in, which on some weapons is far from how they look (a mortar's barrel standing straight up)."><input type="checkbox" id="expPose" checked> Pose as shown</label>
+          <label class="chk line" title="Empties at every weld point (the build grid's attachment points) and at the model's pivots, for modding and rigging. A cabin has 150 or more: in Blender they clutter the view, and Cinema 4D shows each one as a white dot."><input type="checkbox" id="expSlots"> Weld points &amp; pivots as empties</label>
+          <label class="chk line" id="expAnimWrap" hidden title="The part's skeleton, with its moving pieces skinned to it, and every animation of the part (firing, turning, wheel spin and steering ...) as glTF animations. GLB / glTF only."><input type="checkbox" id="expAnim"> Skeleton &amp; animations</label>
+          <label class="chk line"><input type="checkbox" id="expColors"> Vertex colours</label>
+          <button id="exportBtn" class="btn primary wide"><i class="gi" data-gi="icn_download_arrow"></i>Export…</button>
+          <div id="expProgress" class="progress" hidden><div></div></div>
+          <div id="expResult" class="result"></div>
+        </section>
+      </div>
+
+      <!-- Maps inspector -->
+      <div id="mapPanel" class="inspector" hidden>
+        <section class="card sel-card" id="mpSelCard" hidden>
+          <div class="sel-head"><h2 id="mpSelTitle"></h2><button class="sel-x" id="mpSelClose" title="Let go of the selection (Esc)"><i class="gi" data-gi="icn_cancel"></i></button></div>
+          <div class="sel-kind" id="mpSelKind"></div>
+          <div class="path" id="mpSelPath" title="Click to copy"></div>
+          <dl class="stats" id="mpSelStats"></dl>
+          <div class="mp-kinds" id="mpSelKinds"></div>
+          <div class="row sel-acts">
+            <button class="btn small" id="mpSelOpen" title="Open this model in the 3D Viewer (looks, textures, export of the model alone)"><i class="gi" data-gi="icn_hologram"></i>Open in 3D Viewer</button>
+            <button class="btn small" id="mpSelFly" title="Fly to the selection (F, or double-click it)"><i class="gi" data-gi="icn_arrow_map"></i>Fly to</button>
+            <button class="btn small" id="mpSelAll" title="Select every one of this model on the map"></button>
+            <button class="btn small" id="mpSelHide" title="Hide the selection from the view and from the map's export (H or Delete)"><i class="gi" data-gi="icn_eye_closed"></i>Hide</button>
+          </div>
+          <h3 class="sel-exp">Export selection</h3>
+          <div class="seg" id="msFmtSeg">
+            <button data-fmt="glb" class="on" title="One file, textures inside. Best for Blender.">GLB</button>
+            <button data-fmt="gltf">glTF</button>
+            <button data-fmt="obj">OBJ</button>
+          </div>
+          <label class="chk line" title="Off: the selection sits on the origin, as the objects stand to each other. On: the map's own coordinates (lines up with an export of the whole map)."><input type="checkbox" id="msKeepPos"> At their place on the map</label>
+          <button id="msExport" class="btn primary wide"><i class="gi" data-gi="icn_download_arrow"></i>Export selection…</button>
+          <div id="msProgress" class="progress" hidden><div></div></div>
+          <div id="msResult" class="result"></div>
+        </section>
+        <section class="card">
+          <h2 id="mpName">No map open</h2>
+          <div class="path" id="mpPath"></div>
+          <dl class="stats" id="mpStats"></dl>
+          <div id="mpLoad" class="map-load" hidden><div class="progress"><div></div></div><span></span></div>
+          <div id="mpErrors" class="warnings"></div>
+          <label class="line" title="Some objects are only there in some game modes (bases, capture points, barriers)">Game mode <select id="mpMode"></select></label>
+          <label class="line" title="Festival decorations (Halloween, New Year ...)">Festival <select id="mpFestival"></select></label>
+          <label class="line" title="The sky, light and weather: each one the game has for this map (some only at a festival, or in another mode). Its sounds and a few objects change with it, and an export takes it too.">Weather <select id="mpEnv"></select></label>
+        </section>
+        <section class="card">
+          <h3>Show</h3>
+          <div class="map-show">
+            <label class="chk"><input type="checkbox" data-show="terrain" checked> Terrain</label>
+            <label class="chk"><input type="checkbox" data-show="props" checked> Props</label>
+            <label class="chk"><input type="checkbox" data-show="trees" checked> Trees &amp; plants</label>
+            <label class="chk"><input type="checkbox" data-show="objects" checked> Objects</label>
+            <label class="chk"><input type="checkbox" data-show="water" checked> Water</label>
+            <label class="chk"><input type="checkbox" data-show="spawns" checked> Spawn points</label>
+            <label class="chk"><input type="checkbox" data-show="grass" checked> Grass</label>
+            <label class="chk"><input type="checkbox" data-show="decals" checked> Decals</label>
+            <label class="chk" title="The map's own lights: lamps, fires' glow and projectors lighting what is near the camera, the glow of their bulbs and their beams in the air. On in the weathers the game switches them on in, as bright as that weather's light lets them look (lost in the noon sun, bright at night)."><input type="checkbox" data-show="lights" checked> Lights</label>
+            <label class="chk" title="The objects' further texture layers as the game blends them over their first: moss and grass on rocks, rust, dirt and paint on buildings and wrecks (off: each object's first layer alone)"><input type="checkbox" data-show="layers" checked> Material layers</label>
+            <label class="chk" title="The map's own sky: its atmosphere, sun, clouds and haze (else a plain sky)"><input type="checkbox" data-show="sky" checked> Game sky</label>
+            <label class="chk" title="The map's own sounds, from the game's sound banks: the air of its weather and time of day with its birds, crows or thunder, and what is placed on it (fires, windmills, crickets, rivers, rain on a roof ...) where it stands. As loud as the Sound setting of the 3D Viewer's Animation card; quiet while the window is in the background."><input type="checkbox" data-show="sound" checked> Sounds</label>
+            <label class="chk" title="The map's own effects, from the game's particle files: fires, burning tyres, torches, smoke, steam, water leaks and sparks where they stand (the nearest), and its weather's snow, rain, ash, petals or dust around the camera (not under bridges and roofs). Paused while the window is in the background."><input type="checkbox" data-show="effects" checked> Effects</label>
+          </div>
+          <div class="mp-hidden" id="mpHiddenRow" hidden><span id="mpHiddenText"></span><button class="btn small" id="mpShowHidden"><i class="gi" data-gi="icn_eye_opened"></i>Show them</button></div>
+          <div class="ar"><span>View distance</span><input type="range" id="mpDist" min="300" max="8000" step="100" value="1500"><span class="val" id="mpDistVal">1500 m</span></div>
+          <div class="ar" title="How far out the grass is drawn (each kind as far as the game lets it)"><span>Grass up to</span><input type="range" id="mpGrass" min="40" max="400" step="10" value="150"><span class="val" id="mpGrassVal">150 m</span></div>
+          <label class="line" title="How far out the models keep their finer levels of detail">Detail
+            <select id="mpDetail"><option value="low">Low</option><option value="medium">Medium</option><option value="high" selected>High</option><option value="ultra">Ultra</option></select></label>
+          <label class="line" title="Sharper textures take more video memory (the map loads again)">Textures up to
+            <select id="mpTex"><option value="256">256 px</option><option value="512">512 px</option><option value="1024" selected>1024 px</option><option value="2048">2048 px</option></select></label>
+        </section>
+        <section class="card">
+          <h3>Fire</h3>
+          <label class="line" title="The gun that fires from beside the camera while V is held: its muzzle flash, rounds, hits and sounds, as in the 3D Viewer">Gun <select id="mpGun"></select></label>
+          <label class="line every-line" title="The shot timer: seconds from one shot to the next while V is held (1, 6, 13 …). Empty: as in the game: once per the gun's reload time, non-stop for a gun that fires non-stop. The same setting as the 3D Viewer's and the builder's.">Shot every <span class="every-in"><input type="number" id="mEvery" class="every" min="0" max="600" step="any" placeholder="game pace"><span>s</span></span></label>
+          <p class="hint">Hold <b>V</b> to fire it at the middle of the view: its rounds land on the ground and the map's objects, guided missiles steer there. In the Vehicle Builder, V fires every weapon on the vehicle.</p>
+          <div class="ar" title="How loud the game's sounds are: the guns, their hits and blasts, and the map's own sounds (the same setting everywhere; 0 is off)"><span>Sound</span><input type="range" id="mVolume" min="0" max="100" step="1" value="70"><span class="val" id="mVolumeVal">70%</span></div>
+        </section>
+        <section class="card" id="mpMissingCard" hidden>
+          <h3>Not shown <span class="count" id="mpMissingCount"></span></h3>
+          <p class="hint">Objects the game builds from definitions in its encrypted archives, with no model of a matching name.</p>
+          <div id="mpMissing" class="mp-missing"></div>
+        </section>
+        <section class="card">
+          <h3>Export map</h3>
+          <div class="seg" id="mxFmtSeg">
+            <button data-fmt="glb" class="on" title="One file, textures inside. Best for Blender.">GLB</button>
+            <button data-fmt="gltf">glTF</button>
+            <button data-fmt="obj">OBJ</button>
+          </div>
+          <label class="chk line"><input type="checkbox" id="mxTerrain" checked> Terrain with its ground colour</label>
+          <label class="line">Ground texture <select id="mxGround"><option value="2048">2048 px</option><option value="4096" selected>4096 px</option><option value="8192">8192 px</option></select></label>
+          <label class="chk line"><input type="checkbox" id="mxProps" checked> Props</label>
+          <label class="chk line"><input type="checkbox" id="mxTrees" checked> Trees &amp; plants</label>
+          <label class="chk line"><input type="checkbox" id="mxObjects" checked> Objects</label>
+          <label class="chk line"><input type="checkbox" id="mxWater" checked> Water</label>
+          <label class="chk line"><input type="checkbox" id="mxDecals" checked> Decals</label>
+          <label class="chk line" title="Copies of each grass model (EXT_mesh_gpu_instancing): small files. Blender turns every tuft into an object of its own, so keep the amount low for Blender."><input type="checkbox" id="mxGrass" checked> Grass</label>
+          <label class="line">Grass amount <select id="mxGrassAmt"><option value="1">All</option><option value="0.5">Half</option><option value="0.25" selected>A quarter</option><option value="0.1">A tenth</option></select></label>
+          <label class="chk line" title="The game's sun for this map, as a glTF light (KHR_lights_punctual)."><input type="checkbox" id="mxSun" checked> Sun</label>
+          <label class="chk line" title="The game's own HDR capture of the map's surroundings (its light probe: the sky with its clouds and haze, the land around; else the sky worked out from its atmosphere), as a panorama beside the file (Radiance .hdr) to use as Blender's World."><input type="checkbox" id="mxSky" checked> Sky panorama (.hdr)</label>
+          <label class="line">Sky size <select id="mxSkySize"><option value="1024">1024 px</option><option value="2048" selected>2048 px</option><option value="4096">4096 px</option></select></label>
+          <label class="line">LOD <select id="mxLod"><option value="0">0 (best)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4 (lowest)</option></select></label>
+          <label class="chk line"><input type="checkbox" id="mxTextures" checked> Textures (PNG)</label>
+          <label class="chk line" title="The baked shadows (ambient occlusion) of the terrain and the objects in their materials. Game engines use them for softer shadows in corners. Cinema 4D turns them into an Overall Tint that darkens everything, so leave this off for Cinema 4D. Blender does not use them either way."><input type="checkbox" id="mxAo"> Ambient occlusion in the material</label>
+          <label class="line">Textures up to <select id="mxMaxTex"><option value="512">512 px</option><option value="1024" selected>1024 px</option><option value="2048">2048 px</option><option value="0">Full size</option></select></label>
+          <p class="hint">The map as shown here (game mode, festival). Big maps make big files. Grass and the sun need GLB or glTF; the sky panorama goes beside the file.<span id="mxHiddenNote" hidden></span></p>
+          <button id="mxExport" class="btn primary wide" disabled><i class="gi" data-gi="icn_download_arrow"></i>Export map…</button>
+          <div id="mxProgress" class="progress" hidden><div></div></div>
+          <div id="mxResult" class="result"></div>
+        </section>
+      </div>
+
+      <!-- vehicle builder inspector -->
+      <div id="buildPanel" class="inspector" hidden>
+        <section class="card">
+          <input id="bName" class="name-input" value="My build" spellcheck="false" title="Build name">
+          <div id="bFile" class="build-file"></div>
+          <dl class="stats" id="bStats"></dl>
+          <div id="bGroups" class="groups"></div>
+          <div class="row">
+            <button id="bNew" class="btn small">New</button>
+            <button id="bOpen" class="btn small" title="Ctrl+O">Open…</button>
+            <button id="bSave" class="btn small" title="Ctrl+S"><i class="gi" data-gi="icn_save_discette"></i>Save</button>
+            <button id="bSaveAs" class="btn small" title="Save under another name (Ctrl+Shift+S)"><i class="gi" data-gi="icn_save"></i>Save as…</button>
+          </div>
+        </section>
+        <section class="card" id="bCheckCard">
+          <h3>Parts to place <span id="ckCount" class="count"></span></h3>
+          <div id="ckList" class="ck-list"></div>
+          <details id="ckEdit" class="ck-edit">
+            <summary id="ckSummary">Type or paste the parts</summary>
+            <textarea id="ckText" rows="7" spellcheck="false" placeholder="One part per line, with how many:&#10;Werewolf&#10;4 Bigfoot ST&#10;2x Scorpion&#10;Lightweight frame 6×4 x3"></textarea>
+            <div class="row">
+              <button id="ckApply" class="btn small primary"><i class="gi" data-gi="ui/icn_check"></i>Make the list</button>
+              <button id="ckClear" class="btn small"><i class="gi" data-gi="icn_delete"></i>Clear</button>
+            </div>
+            <p class="hint">In the game, the Exhibition lists a design's parts when you point at it. Click a line here to put that part on the cursor: it ticks off as you place them.</p>
+          </details>
+        </section>
+        <section class="card" id="bRefCard">
+          <h3>Reference pictures <span id="refCount" class="count"></span></h3>
+          <p class="hint" id="refEmptyHint">Screenshots of your vehicle from the game, to build over: turn the view about the way a screenshot looks, add it, line it up, and pin it to that view.</p>
+          <div id="refList" class="ref-list"></div>
+          <div id="refControls" class="ref-controls" hidden>
+            <div class="ar"><span>Opacity</span><input type="range" id="refOpacity" min="0.1" max="1" step="0.01"><span class="val" id="refOpacityVal"></span></div>
+            <div class="ar"><span title="The camera's field of view for this picture: change it when the perspective of the screenshot looks different">Lens</span><input type="range" id="refLens" min="15" max="90" step="0.5"><span class="val" id="refLensVal"></span></div>
+            <label class="chk line" title="Over the parts (see-through), or behind them like a backdrop"><input type="checkbox" id="refFront"> In front of the parts</label>
+            <div class="row">
+              <button id="refAdjust" class="btn small" title="Drag and zoom the picture over the view (Enter or Esc when it fits)">Line it up</button>
+              <button id="refPin" class="btn small" title="Tie the picture to the view you have now"><i class="gi" data-gi="icn_location"></i>Pin to this view</button>
+              <button id="refGo" class="btn small" title="Back to the picture's view (P)"><i class="gi" data-gi="build/icn_cameramove"></i>Go to its view</button>
+            </div>
+          </div>
+          <div class="row">
+            <button id="refAdd" class="btn small"><i class="gi" data-gi="icn_plus"></i>Add picture…</button>
+            <button id="refToggle" class="btn small" title="Show or hide the picture (P). Shift+P: the next picture" hidden>Hide (P)</button>
+          </div>
+        </section>
+        <section class="card" id="bFireCard">
+          <h3>Fire</h3>
+          <label class="line" title="Where the vehicle's rounds land while V is held: on the game's training-ground target stood that far in front of the vehicle, or only on the ground (the same setting as the 3D Viewer's Shots hit)">Shots hit
+            <select id="bTarget">
+              <option value="10">a target 10 m out</option>
+              <option value="25">a target 25 m out</option>
+              <option value="50">a target 50 m out</option>
+              <option value="0">only the ground</option>
+            </select></label>
+          <p class="hint">Hold <b>V</b>: every weapon on the vehicle fires as in the game (once per its reload time, a rocket pod a salvo, the rest non-stop), with its effects and sounds; the guns move as they fire.</p>
+          <label class="line every-line" title="The shot timer: seconds from one shot to the next while V is held, every weapon together (1, 6, 13 …); between shots they hold still. Empty: each as in the game: once per its reload time (a rocket pod a salvo), non-stop for the guns that fire non-stop. The same setting as the 3D Viewer's and Maps'.">Shot every <span class="every-in"><input type="number" id="bEvery" class="every" min="0" max="600" step="any" placeholder="game pace"><span>s</span></span></label>
+          <div class="ar" title="How loud the game's sounds are: the guns, their hits and blasts (the same setting everywhere; 0 is off)"><span>Sound</span><input type="range" id="bVolume" min="0" max="100" step="1" value="70"><span class="val" id="bVolumeVal">70%</span></div>
+        </section>
+        <section class="card" id="bVehicleCard">
+          <h3>Vehicle stats</h3>
+          <div class="vs compact" id="bVehicle"></div>
+          <p class="hint" id="bStatsSource">Part stats from crosscalc.net's item table.</p>
+        </section>
+        <section class="card" id="bSelCard" hidden>
+          <h3 id="bSelTitle">Selected part</h3>
+          <div class="sel-name" id="bSelName"></div>
+          <div class="path" id="bSelPath"></div>
+          <div class="hint twin-hint" id="bTwinHint" hidden>Symmetry is on: moves, turns, skin and delete also apply to its mirror twin (blue box).</div>
+          <label class="line" id="bSkinWrap">Skin <select id="bSkin"></select></label>
+          <label class="chk line" id="bStWrap" hidden title="The steering version of this wheel (ST in the game): the same model, but it turns the car, with less tonnage and more drain on the cabin's power"><input type="checkbox" id="bSt"> Steering wheel (ST)</label>
+          <div class="xyz">
+            <label>X <input type="number" step="0.3" id="bPx"></label>
+            <label>Y <input type="number" step="0.3" id="bPy"></label>
+            <label>Z <input type="number" step="0.3" id="bPz"></label>
+          </div>
+          <div class="rot">
+            <span>Rotate</span>
+            <button data-turn="spin,1" class="btn small" title="Spin (R)">↺</button><button data-turn="spin,-1" class="btn small" title="Spin (Shift+R)">↻</button>
+            <button data-turn="tip,-1" class="btn small" title="Tip away (Shift+T)">T−</button><button data-turn="tip,1" class="btn small" title="Tip towards you (T)">T+</button>
+            <button data-turn="roll,-1" class="btn small" title="Roll left (Shift+Y)">Y−</button><button data-turn="roll,1" class="btn small" title="Roll right (Y)">Y+</button>
+          </div>
+          <div class="row">
+            <button id="bMove" class="btn small" title="Pick it up and drop it somewhere else (G)"><i class="gi" data-gi="build/icn_objectmove"></i>Move</button>
+            <button id="bDup" class="btn small" title="Ctrl+D"><i class="gi" data-gi="build/icn_objectcopy"></i>Duplicate</button>
+            <button id="bMirror" class="btn small" title="X">Mirror</button>
+            <button id="bDel" class="btn small" title="Delete"><i class="gi" data-gi="build/icn_objectdelete"></i>Delete</button>
+            <button id="bOpenPart" class="btn small" title="Open this part in the 3D viewer (textures, colours)"><i class="gi" data-gi="icn_hologram"></i>In viewer</button>
+          </div>
+        </section>
+        <section class="card" id="bPaintCard">
+          <h3>Paint</h3>
+          <div class="seg small" id="bPaintMode">
+            <button data-mode="all" class="on" title="The vehicle's paint: every part without a paint of its own">Whole vehicle</button>
+            <button data-mode="sel" title="Paint the selected parts">Selected parts</button>
+            <button data-mode="brush" title="Paint parts by clicking them, or dragging over them (Esc stops)"><i class="gi" data-gi="module/icn_module_dye"></i>Brush</button>
+          </div>
+          <p class="hint" id="bPaintHint">The vehicle's paint: on every part that has no paint of its own (parts added later too).</p>
+          <div id="bPaintPicker"></div>
+          <div class="row">
+            <button id="bPaintOff" class="btn small">Remove the vehicle's paint</button>
+            <button id="bPaintSelVehicle" class="btn small" hidden title="These parts take the vehicle's paint again">Use the vehicle's paint</button>
+          </div>
+          <div class="row paint-own" id="bPaintOwnRow" hidden><span id="bPaintOwnText"></span><button id="bPaintOwnClear" class="btn small" title="Every part takes the vehicle's paint">Paint them too</button></div>
+          <p class="hint">Only where each part's paint mask lets it show, as in the game. Exports have the paint baked into the textures.</p>
+        </section>
+        <section class="card">
+          <h3>Parts <span id="bCount" class="count"></span></h3>
+          <div id="bList" class="blist"></div>
+        </section>
+        <section class="card">
+          <h3>Export build</h3>
+          <div class="seg" id="bFmtSeg">
+            <button data-fmt="glb" class="on" title="One file, textures inside. Best for Blender.">GLB</button>
+            <button data-fmt="gltf">glTF</button>
+            <button data-fmt="obj">OBJ</button>
+          </div>
+          <label class="line">LOD <select id="bLod"><option value="0">0 (best)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4 (lowest)</option></select></label>
+          <label class="chk line"><input type="checkbox" id="bExpTextures" checked> Textures (PNG)</label>
+          <label class="line" title="The game's own smaller sizes (its mipmaps), for lighter files: a cabin's textures alone are 37 MB at full size">Textures up to <select id="bMaxTex"><option value="0">Full size</option><option value="2048" selected>2048 px</option><option value="1024">1024 px</option><option value="512">512 px</option></select></label>
+          <label class="chk line"><input type="checkbox" id="bExpDds"> Original textures as DDS too</label>
+          <label class="chk line"><input type="checkbox" id="bExpExtra"> Extra maps (gloss, ambient occlusion)</label>
+          <label class="chk line" title="The game's baked shadows (ambient occlusion) in the material. Game engines use them for softer shadows in corners. Cinema 4D turns them into an Overall Tint that makes the whole part much darker, so leave this off for Cinema 4D. Blender does not use them either way."><input type="checkbox" id="bExpAo"> Ambient occlusion in the material</label>
+          <label class="chk line" title="Cinema 4D drops any glTF mesh that has more than one material, so the part goes missing. With this on, each material is its own object under the part. Turn it off for one object per part (Blender and Unreal take both). GLB / glTF only."><input type="checkbox" id="bExpSplit" checked> One object per material (for Cinema 4D)</label>
+          <label class="chk line" id="bExpSelWrap" title="Select parts first (click, Ctrl+click, Shift+drag)"><input type="checkbox" id="bExpSel"> Only the selected parts</label>
+          <button id="bExport" class="btn primary wide"><i class="gi" data-gi="icn_download_arrow"></i>Export build…</button>
+          <div id="bProgress" class="progress" hidden><div></div></div>
+          <div id="bResult" class="result"></div>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <footer id="status"><span id="statusText"></span><span class="spacer"></span><span id="statusRight"></span></footer>
+
+  <div id="gameDialog" class="modal" hidden>
+    <div class="modal-card">
+      <h2>Where is Crossout?</h2>
+      <p id="gameDialogText">Crossout was not found automatically.</p>
+      <p class="hint">Pick the folder that contains Crossout's <b>data</b> folder, usually
+        <code>%LOCALAPPDATA%\Crossout Launcher</code> or <code>steamapps\common\Crossout</code>.</p>
+      <div class="row right"><button id="gameDialogPick" class="btn primary">Choose folder…</button></div>
+    </div>
+  </div>
+
+  <!-- Donations (ui/support.js; the links: ui/support.json) -->
+  <div id="donateDialog" class="modal support-modal" hidden>
+    <div class="modal-card support-card" role="dialog" aria-modal="true" aria-labelledby="donateTitle">
+      <h2 id="donateTitle">Support Grimcold</h2>
+      <button class="modal-x" data-close title="Close">×</button>
+      <div class="support-body">
+        <p class="lead">Grimcold is free and stays free. It is an unofficial fan tool made in spare time; if it is useful to you, you can support its development with a donation.</p>
+        <p>A donation is a voluntary gift: it does not unlock anything or give perks, and everyone gets the same app.</p>
+        <div class="donate-links" id="donateLinks"></div>
+        <p class="hint" id="donateNone" hidden>Donation links have not been set up yet.</p>
+        <p class="hint">The platform you pick takes the payment on its own page; this app never sees your payment details.</p>
+        <div class="support-note" id="donateOfficial" hidden>
+          <p><b>The official download:</b> <a href="#" id="donateOfficialLink"></a></p>
+          <p class="hint">Copies anywhere else, and anything that asks you to turn off your antivirus, are not from this project.</p>
+        </div>
+        <p class="hint fine">Unofficial fan project, not affiliated with Gaijin Entertainment or Targem Games. The app only reads the game's files and never changes them.</p>
+        <p class="hint fine" id="legalNote">Grimcold by Nrnis, © 2026. Free software under the GNU GPL v3 with additional terms; it comes with no warranty. Licence and source: <a href="#" id="legalSource" data-url="https://github.com/Nrnis/Grimcold">github.com/Nrnis/Grimcold</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bug report (ui/support.js; the host's side: src/app/report.h) -->
+  <div id="reportDialog" class="modal support-modal" hidden>
+    <div class="modal-card support-card" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+      <h2 id="reportTitle">Report a bug</h2>
+      <button class="modal-x" data-close title="Close">×</button>
+      <div class="support-body">
+        <section class="support-sec">
+          <h3>Tell us what happened</h3>
+          <p>The best report is a short form on GitHub (a free account is needed): what you did, what you saw, what you expected. The app fills in its version and the details below for you.</p>
+          <div class="row"><button class="btn primary" id="repGithub">Open the bug report form</button><button class="btn" id="repKnown">Known issues</button></div>
+          <p class="hint" id="repGithubNote"></p>
+        </section>
+        <section class="support-sec" id="repSendSec">
+          <h3>Send an anonymous technical report</h3>
+          <p>The app's version, Windows, the graphics card and its driver, the errors seen and the log's last lines. No files, no names, no email and nothing typed by you. Stored in the EU for 30 days, used only to fix bugs.</p>
+          <div class="row"><button class="btn" id="repSend">Send report</button><label class="chk"><input type="checkbox" id="repAuto"> Send crash reports automatically</label></div>
+        </section>
+        <p class="hint" id="repNoSend" hidden>This build sends no reports by itself: copy the details into the GitHub form instead.</p>
+        <section class="support-sec">
+          <h3>The details</h3>
+          <p>Exactly what goes with a report: look at it first, or copy it to paste anywhere.</p>
+          <div class="row"><button class="btn" id="repView">Show details</button><button class="btn" id="repCopy">Copy details</button><button class="btn" id="repLogs">Open log folder</button></div>
+          <pre class="support-details" id="repDetails" hidden></pre>
+        </section>
+        <section class="support-sec" id="repProblems" hidden>
+          <h3>Problems seen</h3>
+          <ul class="problem-list" id="repProblemList"></ul>
+        </section>
+        <p class="support-state" id="repState" aria-live="polite"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- after a crash (ui/support.js offerCrashes) -->
+  <div id="crashDialog" class="modal support-modal" hidden>
+    <div class="modal-card support-card" role="alertdialog" aria-modal="true" aria-labelledby="crashTitle">
+      <h2 id="crashTitle">Grimcold crashed. Sorry about that.</h2>
+      <div class="support-body">
+        <p id="crashWhat"></p>
+        <p id="crashAsk">An anonymous technical report helps to fix it: the app's version, Windows, the graphics card and its driver, the error and the log's last lines. <b>No files, no names, no email.</b></p>
+        <p class="hint" id="crashNoSend" hidden>This build sends no reports by itself: copy the details or report it on GitHub.</p>
+        <label class="chk" id="crashAutoRow"><input type="checkbox" id="crashAuto"> Send crash reports automatically from now on</label>
+        <div class="row"><button class="btn small" id="crashView">View what will be sent</button><button class="btn small" id="crashCopy">Copy details</button><button class="btn small" id="crashGithub">Open GitHub issue</button><button class="btn small" id="crashLogs">Open log folder</button></div>
+        <pre class="support-details" id="crashDetails" hidden></pre>
+        <p class="support-state" id="crashState" aria-live="polite"></p>
+        <div class="row right"><button class="btn" id="crashDrop">Don't send</button><button class="btn primary" id="crashSend">Send report</button></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

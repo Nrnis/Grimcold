@@ -1,0 +1,3193 @@
+{
+ "about": "In-game English names of parts, keyed by model file. Sources: the game's own 2018 item data (github.com/Zicore/CrossoutMarket), Crossout fan sites (crosscalc.net: names, and each part's render compared with its in-game icon), and in-game checks. 'folders' titles folders that hold several different parts. Parts not listed show their file name; users can name any part themselves (saved in settings).",
+ "parts": {
+  "models/constructor/cabins/arena_cab1/arena_cab1.mdl": {
+   "name": "Kensei",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/arm_pickup/arm_pickup.mdl": {
+   "name": "Bear",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/arm_spider/arm_spider.mdl": {
+   "name": "Steppe spider",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/armored_cab/armored_cab.mdl": {
+   "name": "Carapace",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/assassins_cab1/assassins_cab1.mdl": {
+   "name": "Ark",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/assassins_cab1/assassins_cab1_drone.mdl": {
+   "name": "Ark drone",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/assassins_cab1/assassins_cab1_drone_bp1.mdl": {
+   "name": "Ark drone · piece 1",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/assassins_cab1/assassins_cab1_drone_bp2.mdl": {
+   "name": "Ark drone · piece 2",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/assassins_cab1/assassins_cab1_drone_bp3.mdl": {
+   "name": "Ark drone · piece 3",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/assassins_cab1/assassins_cab1_drone_bp4.mdl": {
+   "name": "Ark drone · piece 4",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/bell_uh1_oracle/bell_uh1_oracle.mdl": {
+   "name": "Beholder",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/bot_buggy/buggy_cab1.mdl": {
+   "name": "Duster",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/brutus/brutus.mdl": {
+   "name": "Blight",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/bug/cab_bug.mdl": {
+   "name": "Growl",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/bug/cab_bug_air.mdl": {
+   "name": "Growl · McCampbell kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/buggy_start/buggy_start.mdl": {
+   "name": "Sprinter",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/bulldozer/bulldozer.mdl": {
+   "name": "Bastion",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/bulldozer/bulldozer_cybereast.mdl": {
+   "name": "Bastion · Tinbe kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/camaro2gen/camaro2gen.mdl": {
+   "name": "The Call",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/chevy_pickup/chevy.mdl": {
+   "name": "Jockey",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/chevy_pickup/chevy_pickup.mdl": {
+   "name": "Jockey",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/cybereast_cab1/cybereast_cab1.mdl": {
+   "name": "Jannabi",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab2/cybereast_cab2.mdl": {
+   "name": "Yokozuna",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab2/cybereast_cab2_drone.mdl": {
+   "name": "Yokozuna drone",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab2/cybereast_cab2_drone_bp1.mdl": {
+   "name": "Yokozuna drone · piece 1",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab2/cybereast_cab2_drone_bp2.mdl": {
+   "name": "Yokozuna drone · piece 2",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab2/cybereast_cab2_drone_bp3.mdl": {
+   "name": "Yokozuna drone · piece 3",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab2/cybereast_cab2_drone_bp4.mdl": {
+   "name": "Yokozuna drone · piece 4",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab3/cybereast_cab3.mdl": {
+   "name": "Deadman",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab4/cybereast_cab4.mdl": {
+   "name": "Kami",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab4/cybereast_cab4_display.mdl": {
+   "name": "Kami · display",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab5/cybereast_cab5.mdl": {
+   "name": "Beacon 11",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab5/cybereast_cab5_interior.mdl": {
+   "name": "Beacon 11 · interior",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab6/cybereast_cab6.mdl": {
+   "name": "Satori",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/cybereast_cab6/cybereast_cab6_screen.mdl": {
+   "name": "Satori · screen",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/diesel_cab1/diesel_cab1.mdl": {
+   "name": "Muninn",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/diesel_cab2/diesel_cab2.mdl": {
+   "name": "Huginn",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/diesel_cab3/diesel_cab3.mdl": {
+   "name": "Whaler",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/engineers_cab1_fslot/engineers_cab1_fslot.mdl": {
+   "name": "Master",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/engineers_cab2/engineers_cab2.mdl": {
+   "name": "Dolores",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/engineers_cab3/engineers_cab3.mdl": {
+   "name": "Stronghold",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/engineers_cab3/engineers_cab3_legend.mdl": {
+   "name": "Stronghold",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/engineers_cab3/engineers_cab3_legend_perk.mdl": {
+   "name": "Stronghold · perk effect",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/engineers_cab3/engineers_cab3_perk.mdl": {
+   "name": "Stronghold · perk effect",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/engineers_cab3/engineers_cab3_special.mdl": {
+   "name": "Frontier",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/explorer_cab/explorer_cab.mdl": {
+   "name": "Ermak",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ford_pickup/pickup.mdl": {
+   "name": "Huntsman",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ford_pickup/pickup_cut.mdl": {
+   "name": "Huntsman (cut-down)",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/ford_pickup/pickup_detail.mdl": {
+   "name": "Huntsman (detail)",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/ford_pickup/pickup_rusted.mdl": {
+   "name": "Guerilla",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ford_pickup_orakul/ford_pickup_orakul.mdl": {
+   "name": "Huntsman · Ravager-infested",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/gazel/gazel.mdl": {
+   "name": "Docker",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/gazel/gazel_china.mdl": {
+   "name": "Docker CX",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/halloween2020_cab/cab.mdl": {
+   "name": "Dusk",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/halloween2022_cab/halloween2022_cab.mdl": {
+   "name": "Catalina",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/halloween2023_cab/halloween2023_cab.mdl": {
+   "name": "Manitou",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/halloween2024_cab/halloween2024_cab.mdl": {
+   "name": "Inferno",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/junk_cab1/junk_cab1.mdl": {
+   "name": "Machinist",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/junk_cab2/junk_cab2.mdl": {
+   "name": "BWC Warrior",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/junk_cab2/junk_cab2_blue.mdl": {
+   "name": "BWC Warrior · blue lights",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/junk_cab2/junk_cab2_red.mdl": {
+   "name": "BWC Warrior · red lights",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/junk_cab3/junk_cab3.mdl": {
+   "name": "Wildhog",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/junk_cab3/junk_cab3_lightmesh.mdl": {
+   "name": "Wildhog · lights",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ka52/ka52.mdl": {
+   "name": "Hippogriff",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/kamaz/cab_dalnoboy.mdl": {
+   "name": "Trucker · Backbone kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/kamaz/kamaz.mdl": {
+   "name": "Trucker",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/kfz231/kfz231.mdl": {
+   "name": "Echo",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/lambo/lambo.mdl": {
+   "name": "Torero",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/maz537/maz.mdl": {
+   "name": "Humpback",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/maz537/maz537_orakul.mdl": {
+   "name": "Humpback · Ravager-infested",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/maz537/maz_arena.mdl": {
+   "name": "Humpback · Frankenstein kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/mi24/mi24.mdl": {
+   "name": "Ghost (before 2021)",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/mi24/mi24_re.mdl": {
+   "name": "Ghost",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/military_cab4/military_cab4.mdl": {
+   "name": "Cohort",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/military_cab5/military_cab5.mdl": {
+   "name": "Absolute",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/military_cab5/military_cab5_light.mdl": {
+   "name": "Absolute · lights",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/mini_ev/mini_ev.mdl": {
+   "name": "Volt",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/mini_ev/mini_ev_no_logo.mdl": {
+   "name": "Volt (no logo)",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/moby_935/moby_935.mdl": {
+   "name": "Cockpit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/moby_935/moby_935_light_01.mdl": {
+   "name": "Cockpit · interior 1",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/moby_935/moby_935_light_02.mdl": {
+   "name": "Cockpit · interior 2",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/nyear2023_cab/nyear2023_cab.mdl": {
+   "name": "Savior",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/peterbilt_xmas/peterbilt_xmas.mdl": {
+   "name": "Icebox",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/pickup_alpha/pickup_alpha.mdl": {
+   "name": "Thug",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/rage/rage.mdl": {
+   "name": "Fury",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/raider_cab1/raider_cab1.mdl": {
+   "name": "Aggressor",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ravagers_cab1/ravagers_cab1.mdl": {
+   "name": "Mars",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ravagers_cab1/ravagers_cab1_drone.mdl": {
+   "name": "Mars drone",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ravagers_cab1/ravagers_cab1_drone_bp1.mdl": {
+   "name": "Mars drone · piece 1",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ravagers_cab1/ravagers_cab1_drone_bp2.mdl": {
+   "name": "Mars drone · piece 2",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ravagers_cab1/ravagers_cab1_drone_bp3.mdl": {
+   "name": "Mars drone · piece 3",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/ravagers_cab1/ravagers_cab1_dronex10.mdl": {
+   "name": "Mars drone (x10)",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/ravagers_cab1/ravagers_cab1x10.mdl": {
+   "name": "Mars (x10)",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/ravagers_cab2/ravagers_cab2.mdl": {
+   "name": "Nox",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/s_riviera/s_riviera.mdl": {
+   "name": "Hot Rod",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab1/scientists_cab1.mdl": {
+   "name": "Pilgrim",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab1/scientists_cab_piligrim.mdl": {
+   "name": "Pilgrim · T-Rex kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab2/scientists_cab2.mdl": {
+   "name": "Quantum",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab2/scientists_cab2_arena.mdl": {
+   "name": "Quantum · Trump card kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab3/scientists_cab3.mdl": {
+   "name": "Photon",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab4/scientists_cab4.mdl": {
+   "name": "Nova",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab5/scinetists_cab5.mdl": {
+   "name": "Hadron",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab6/scientists_cab6.mdl": {
+   "name": "Kronos",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab7/scientists_cab7.mdl": {
+   "name": "Ajax",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab7/scientists_cab7_shield_light.mdl": {
+   "name": "Ajax · shield light",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/scientists_cab7/shield_cab.mdl": {
+   "name": "Ajax · shield",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/sep_8x8/sep_8x8.mdl": {
+   "name": "Jawbreaker",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/sep_8x8/sep_8x8_canine.mdl": {
+   "name": "Jawbreaker · Lucifer kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/sep_8x8_orakul/sep_8x8_orakul.mdl": {
+   "name": "Jawbreaker · Ravager-infested",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/tribal_cab1/tribal_cab1.mdl": {
+   "name": "Bat",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_cab1/tribal_cab1_pinup.mdl": {
+   "name": "Bat · Wunderbar kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_cab2/tribal_cab2.mdl": {
+   "name": "Griffon",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_cab3/tribal_cab3.mdl": {
+   "name": "Harpy",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_cab3/tribal_cab3_cybereast.mdl": {
+   "name": "Harpy · Basan kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_cab4/tribal_cab4.mdl": {
+   "name": "Ouroboros",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_cabdrill/tribal_cabdrill.mdl": {
+   "name": "Cerberus",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_cabdrone/tribal_cabdrone.mdl": {
+   "name": "Werewolf",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/tribal_hog/tribal_hog.mdl": {
+   "name": "Tusk",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/viper/viper.mdl": {
+   "name": "Howl",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/vw_t1/cab_vw_t1.mdl": {
+   "name": "WWT1",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/vw_t1/vw_t1.mdl": {
+   "name": "WWT1",
+   "confidence": "medium"
+  },
+  "models/constructor/cabins/workers_cab1/workers_cab1.mdl": {
+   "name": "Omnibox",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab1/workers_cab1_diesel.mdl": {
+   "name": "Omnibox · Hammerhead fish kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab1/workers_cab1_diesel_green.mdl": {
+   "name": "Omnibox · Hammerhead fish kit (green lights)",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab1/workers_cab1_diesel_red.mdl": {
+   "name": "Omnibox · Hammerhead fish kit (red lights)",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2.mdl": {
+   "name": "Mainframe",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2_batteries.mdl": {
+   "name": "Mainframe · batteries",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2_battery1.mdl": {
+   "name": "Mainframe · battery 1",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2_battery2.mdl": {
+   "name": "Mainframe · battery 2",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2_battery3.mdl": {
+   "name": "Mainframe · battery 3",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2_light_1.mdl": {
+   "name": "Mainframe · light 1",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2_light_2.mdl": {
+   "name": "Mainframe · light 2",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/workers_cab2/workers_cab2_light_3.mdl": {
+   "name": "Mainframe · light 3",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/wyvern/wyvern2.mdl": {
+   "name": "Wyvern",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/wyvern/wyvern_predator.mdl": {
+   "name": "Wyvern · Raptor kit",
+   "confidence": "high"
+  },
+  "models/constructor/cabins/zubilo/zubilo.mdl": {
+   "name": "Favorite",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/air_cushion/air_cushion_01/air_cushion_01.mdl": {
+   "name": "MVP Torpedo",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/air_cushion/air_cushion_01/air_cushion_01_3.mdl": {
+   "name": "MVP Torpedo · variant",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/air_cushion/air_cushion_02/air_cushion_02.mdl": {
+   "name": "MVP Flagship",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/buggy_base_2x4.mdl": {
+   "name": "Lightweight frame 2×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/buggy_base/buggy_base_4x4.mdl": {
+   "name": "Lightweight frame 4×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/buggy_base/buggy_base_4x6.mdl": {
+   "name": "Lightweight frame 6×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/buggy_base/buggy_base_4x8.mdl": {
+   "name": "Lightweight frame 8×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_1x3.mdl": {
+   "name": "Lightweight frame 1×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_1x4.mdl": {
+   "name": "Lightweight frame 1×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_1x5.mdl": {
+   "name": "Lightweight frame 1×5",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_1x6.mdl": {
+   "name": "Lightweight frame 1×6",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_1x7.mdl": {
+   "name": "Lightweight frame 1×7",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_1x8.mdl": {
+   "name": "Lightweight frame 1×8",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_2x2.mdl": {
+   "name": "Lightweight frame 2×2",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_2x5.mdl": {
+   "name": "Lightweight frame 2×5",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_2x6.mdl": {
+   "name": "Lightweight frame 2×6",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_2x6_lshaped.mdl": {
+   "name": "Lightweight corner frame 6×2×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_2x6_lshaped_mirrored.mdl": {
+   "name": "Lightweight corner frame 6×2×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_2x7.mdl": {
+   "name": "Lightweight frame 2×7",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_2x8.mdl": {
+   "name": "Lightweight frame 2×8",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x3.mdl": {
+   "name": "Lightweight frame 3×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x3_lshaped.mdl": {
+   "name": "Lightweight corner frame 3×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x4.mdl": {
+   "name": "Lightweight frame 3×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x5.mdl": {
+   "name": "Lightweight frame 3×5",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x5_lshaped.mdl": {
+   "name": "Lightweight corner frame 5×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x5_lshaped_mirrored.mdl": {
+   "name": "Lightweight corner frame 5×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x6.mdl": {
+   "name": "Lightweight frame 6×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x6_lshaped.mdl": {
+   "name": "Lightweight corner frame 6×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x6_lshaped_mirrored.mdl": {
+   "name": "Lightweight corner frame 6×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_3x8.mdl": {
+   "name": "Lightweight frame 8×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_4x5_lshaped.mdl": {
+   "name": "Lightweight corner frame 5×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_4x5_lshaped_mirrored.mdl": {
+   "name": "Lightweight corner frame 5×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_4x6_lshaped.mdl": {
+   "name": "Lightweight corner frame 6×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_4x6_lshaped_mirrored.mdl": {
+   "name": "Lightweight corner frame 6×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_4x7.mdl": {
+   "name": "Lightweight frame 7×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_4x8_lshaped.mdl": {
+   "name": "Lightweight corner frame 8×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_4x8_lshaped_mirrored.mdl": {
+   "name": "Lightweight corner frame 8×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_7x3_tshaped.mdl": {
+   "name": "Lightweight nodal frame 7×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/buggy_base/set_buggy_base_8x2x4.mdl": {
+   "name": "Lightweight nodal frame 8×2×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_1x3.mdl": {
+   "name": "Frame 1×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_1x4.mdl": {
+   "name": "Frame 1×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_1x5.mdl": {
+   "name": "Frame 1×5",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_1x6.mdl": {
+   "name": "Frame 1×6",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_1x7.mdl": {
+   "name": "Frame 1×7",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_1x8.mdl": {
+   "name": "Frame 1×8",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_2x5.mdl": {
+   "name": "Frame 2×5",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_2x6.mdl": {
+   "name": "Frame 2×6",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_2x6_lshaped.mdl": {
+   "name": "Corner frame 6×2×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_2x6_lshaped_mirrored.mdl": {
+   "name": "Corner frame 6×2×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_2x7.mdl": {
+   "name": "Frame 2×7",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_2x8.mdl": {
+   "name": "Frame 2×8",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_4x5_lshaped.mdl": {
+   "name": "Corner frame 5×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_4x5_lshaped_mirrored.mdl": {
+   "name": "Corner frame 5×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_4x6_lshaped.mdl": {
+   "name": "Corner frame 6×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_4x6_lshaped_mirrored.mdl": {
+   "name": "Corner frame 6×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_4x7.mdl": {
+   "name": "Frame 7×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_7x3_tshaped.mdl": {
+   "name": "Nodal frame 7×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/set_truck_base_8x2x4.mdl": {
+   "name": "Nodal frame 8×2×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_2x2.mdl": {
+   "name": "Frame 2×2",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_2x4.mdl": {
+   "name": "Frame 2×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x3.mdl": {
+   "name": "Frame 3×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x3_lshaped.mdl": {
+   "name": "Corner frame 3×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x4.mdl": {
+   "name": "Frame 3×4",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x5.mdl": {
+   "name": "Frame 3×5",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x5_lshaped.mdl": {
+   "name": "Corner frame 5×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x5_lshaped_mirrored.mdl": {
+   "name": "Corner frame 5×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x6.mdl": {
+   "name": "Frame 6×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x6_lshaped.mdl": {
+   "name": "Corner frame 6×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x6_lshaped_mirrored.mdl": {
+   "name": "Corner frame 6×3×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_3x8.mdl": {
+   "name": "Frame 8×3",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_4x4.mdl": {
+   "name": "Frame 4×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_4x6.mdl": {
+   "name": "Frame 6×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_4x8.mdl": {
+   "name": "Frame 8×4",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_4x8_lshaped.mdl": {
+   "name": "Corner frame 8×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/base/truck_base/truck_base_4x8_lshaped_mirrored.mdl": {
+   "name": "Corner frame 8×4×1",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/hovers/hover_jet/hover_jet.mdl": {
+   "name": "Icarus VII (old model)",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/hovers/hover_jet/hover_jet01.mdl": {
+   "name": "Icarus VII",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/hovers/hover_jet/hover_jet02.mdl": {
+   "name": "Icarus IV",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/hovers/hover_jet/hover_jet03.mdl": {
+   "name": "Icarus I",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/leg_vertical/leg_vertical_epic/leg_vertical_epic.mdl": {
+   "name": "Tengu",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/leg_vertical/leg_vertical_epic_02/leg_vertical_epic_02.mdl": {
+   "name": "RL-M Dino",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/leg_vertical/leg_vertical_epic_03/leg_vertical_epic_03.mdl": {
+   "name": "Driver",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/leg_vertical/leg_vertical_preepic_01/leg_vertical_preepic_01.mdl": {
+   "name": "Flamingo",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/legs/leg01.mdl": {
+   "name": "ML 200",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/legs/leg02/leg02.mdl": {
+   "name": "Gerrida I",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/legs/leg_millipede/leg_millipede_base.mdl": {
+   "name": "Myriad",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/legs/leg_millipede/leg_millipede_leg_01.mdl": {
+   "name": "Myriad · leg",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/legs/leg_millipede/leg_millipede_leg_02.mdl": {
+   "name": "Myriad · leg",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/legs/leg_millipede/leg_millipede_regen_left.mdl": {
+   "name": "Myriad · leg piece",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/legs/leg_millipede/leg_millipede_regen_right.mdl": {
+   "name": "Myriad · leg piece",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/legs/legs_new_mech_01/legs_new_mech_01.mdl": {
+   "name": "Bigram",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/propellers/propeller_classic_01/propeller_classic_01.mdl": {
+   "name": "MR-2 Maple",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/propellers/propeller_coaxis_00/propeller_coaxis_00.mdl": {
+   "name": "CR-1 Seagull",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/propellers/propeller_coaxis_01/propeller_coaxis_01.mdl": {
+   "name": "Falco",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/propellers/propeller_coaxis_02/propeller_coaxis_02.mdl": {
+   "name": "CR-2 Petrel",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/propellers/propeller_quadrocopter_01/propeller_quadrocopter_01.mdl": {
+   "name": "Hummingbird",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/propellers/propeller_tail_01/propeller_tail_01.mdl": {
+   "name": "Impeller",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/shneck/shneck.mdl": {
+   "name": "Meat Grinder",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_2_wheel/track_2_wheel.mdl": {
+   "name": "Small track",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_2_wheel/track_2_wheel_cybereast.mdl": {
+   "name": "Small track · Syndicate skin",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_diesel_01/track_diesel_01.mdl": {
+   "name": "Sleipnir",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_dow/track_dow.mdl": {
+   "name": "Tank track",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_raider_01/track_raider_01.mdl": {
+   "name": "Hyena",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/tracks/track_rhomboid/track_rhomboid.mdl": {
+   "name": "Goliath",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_tractor/track_tractor.mdl": {
+   "name": "Armored track",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_tractor/track_tractor_diesel.mdl": {
+   "name": "Armored track · Hyperborea skin",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/tracks/track_triangle/track_triangle.mdl": {
+   "name": "Hardened track",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/tribal_big1/tribal_big1.mdl": {
+   "name": "Bigfoot",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/tribal_spiked/tribal_spiked.mdl": {
+   "name": "Shiv",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/valentine_wheel/valentine_wheel.mdl": {
+   "name": "Stallion",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_avia_small.mdl": {
+   "name": "Landing gear",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_baloon.mdl": {
+   "name": "Balloon tyre",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_chains.mdl": {
+   "name": "Chained wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_cybereast_01/wheel_cybereast_01.mdl": {
+   "name": "Uwabaki",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/wheels/wheel_doublehvy.mdl": {
+   "name": "Twin wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_drag.mdl": {
+   "name": "Racing wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_elementary.mdl": {
+   "name": "Starter wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_heavy.mdl": {
+   "name": "Medium wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_ilon.mdl": {
+   "name": "Omni",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_light.mdl": {
+   "name": "Small wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_medieval.mdl": {
+   "name": "Gun-mount wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_military.mdl": {
+   "name": "APC wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_moto_assassins_01.mdl": {
+   "name": "Wayfarer",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_moto_cybereast_01.mdl": {
+   "name": "Claw",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_moto_military_01.mdl": {
+   "name": "Outcast",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/wheels/wheel_moto_raider_01.mdl": {
+   "name": "Sabbath",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_oracle_epic.mdl": {
+   "name": "Hermit",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/wheels/wheel_raider_01.mdl": {
+   "name": "Buggy wheel",
+   "confidence": "medium"
+  },
+  "models/constructor/chassis/wheels/wheel_ravager_epic.mdl": {
+   "name": "Titan",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_scientists.mdl": {
+   "name": "Lunar IV",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_sphere_01_arena.mdl": {
+   "name": "Atom",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_spiked.mdl": {
+   "name": "Studded wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_stance/wheel_stance.mdl": {
+   "name": "Camber",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_tractor.mdl": {
+   "name": "Large wheel",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_workers.mdl": {
+   "name": "Array",
+   "confidence": "high"
+  },
+  "models/constructor/chassis/wheels/wheel_workers_2modes/wheel_workers_2modes.mdl": {
+   "name": "Widget",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/alpha_sign/alpha_sign_big.mdl": {
+   "name": "Large 'Alpha' sign",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/alpha_sign/alpha_sign_small.mdl": {
+   "name": "Small 'Alpha' sign",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/bags/big_bag.mdl": {
+   "name": "Travel bag",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/bags/leather_bag.mdl": {
+   "name": "Cantle bag",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/banner_skull_cow/banner_skull_cow.mdl": {
+   "name": "Spears",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beep_teutonique/beep_teutonique.mdl": {
+   "name": "Huntsman's horn",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_funny_01.mdl": {
+   "name": "'Joker'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_funny_02.mdl": {
+   "name": "'Full House 2'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_funny_03.mdl": {
+   "name": "'Cucaracha'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_police_01.mdl": {
+   "name": "'Pull Over'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_police_01_skin1.mdl": {
+   "name": "'D minor'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_ship_01.mdl": {
+   "name": "'Titanic'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_ship_01_skin1.mdl": {
+   "name": "'Potemkin'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_simple_01.mdl": {
+   "name": "Buzzer",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/beeps/beep_truck_01.mdl": {
+   "name": "'Express'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/deer_head/deer_head.mdl": {
+   "name": "Hunter's trophy",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/donut/donut.mdl": {
+   "name": "Donut",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/duck/duck1.mdl": {
+   "name": "Duck",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/duck/duck_china.mdl": {
+   "name": "Duckling",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/duck/duck_evil.mdl": {
+   "name": "Duckinator",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/exhaust/exhaust_quad_01.mdl": {
+   "name": "Crazy exhaust",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/exhaust/exhaust_single_02.mdl": {
+   "name": "Exhaust 2",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/exhaust/exhaust_triple_01.mdl": {
+   "name": "Hell pipes",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/flags/flag_v_engnr.mdl": {
+   "name": "Engineer standard",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/flags/flag_v_jnk.mdl": {
+   "name": "Scavenger standard",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/flags/flag_v_mltry.mdl": {
+   "name": "Steppenwolf standard",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/flags/flag_v_nmd.mdl": {
+   "name": "Nomad standard",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/flags/flag_v_rdr.mdl": {
+   "name": "Lunatic standard",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/flags/flag_v_scntst.mdl": {
+   "name": "Dawn's Children standard",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/hlw_balloon/hlw_balloon.mdl": {
+   "name": "Pumpalloons",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/hlw_duck/hlw_duck.mdl": {
+   "name": "Horror show",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/hlw_pumpkin/hlw_pumpkin.mdl": {
+   "name": "Jack-o'-lantern",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/horns_cow/horns_cow.mdl": {
+   "name": "Horns",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/icecream/icecream.mdl": {
+   "name": "Frostbite",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/knobstick/knobstick.mdl": {
+   "name": "Bludgeon",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/lights_basic/office_lamp_4x1x1.mdl": {
+   "name": "Fluorescent lamp",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/lights_basic/offroad_light_4x1x1.mdl": {
+   "name": "Headlights set",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/lights_basic/spotlight_1x1x2.mdl": {
+   "name": "Hell lamp",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/lights_rear/3round_t_light.mdl": {
+   "name": "Brake light",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/lights_rear/gazel_t_light.mdl": {
+   "name": "Tail light",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/police_flasher/police_flasher.mdl": {
+   "name": "Light bar",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_01.mdl": {
+   "name": "'Stop!'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_02.mdl": {
+   "name": "'Everything is permitted'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_03.mdl": {
+   "name": "'You're trash!'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_04.mdl": {
+   "name": "'No escape'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_05.mdl": {
+   "name": "'Run, you fools!'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_06.mdl": {
+   "name": "'Stop and think'",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_07.mdl": {
+   "name": "'No entry' sign",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_08.mdl": {
+   "name": "Maintenance sign",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_09.mdl": {
+   "name": "Tanks ahoy!",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_10.mdl": {
+   "name": "Slippery slope",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/roadsigns/roadsign_11.mdl": {
+   "name": "Beware of mutants!",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/sign_eagle/eagle.mdl": {
+   "name": "Eagle",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/skull_cow/skull_cow.mdl": {
+   "name": "Skull",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/skull_cow/skull_cow_shell.mdl": {
+   "name": "Armored skull",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/speakers_old_big/speakers_old_big.mdl": {
+   "name": "Large speaker",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/speakers_old_small/speakers_old_small.mdl": {
+   "name": "Small speaker",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/spoiler_light/spoiler.mdl": {
+   "name": "Spoiler",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/spoiler_light/spoiler_china.mdl": {
+   "name": "Wing CX",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/traffic_light/t_light.mdl": {
+   "name": "Traffic light",
+   "confidence": "medium"
+  },
+  "models/constructor/decor/wheel_med/wheel_med.mdl": {
+   "name": "Spare tyre",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/absorber_fslot_legend/absorber_fslot_legend.mdl": {
+   "name": "Omamori",
+   "confidence": "high"
+  },
+  "models/constructor/modules/ammo_basic_rare/ammo_basic_rare.mdl": {
+   "name": "Ammo reserve",
+   "confidence": "high"
+  },
+  "models/constructor/modules/ammo_big.mdl": {
+   "name": "Ammo rack",
+   "confidence": "high"
+  },
+  "models/constructor/modules/ammo_preepic/ammo_preepic.mdl": {
+   "name": "Ammo supply",
+   "confidence": "high"
+  },
+  "models/constructor/modules/ammo_regen_legend/ammo_regen_legend.mdl": {
+   "name": "Pandora",
+   "confidence": "high"
+  },
+  "models/constructor/modules/ammo_special_epic/ammo_special_epic.mdl": {
+   "name": "Rune-1",
+   "confidence": "high"
+  },
+  "models/constructor/modules/charge_accelerator_legend/charge_accelerator_legend.mdl": {
+   "name": "Starter",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/cooldown_accelerator/cooldown_accelerator_epic.mdl": {
+   "name": "KA-2 Flywheel",
+   "confidence": "high"
+  },
+  "models/constructor/modules/cooldown_accelerator/cooldown_accelerator_preepic.mdl": {
+   "name": "KA-1 Discharger",
+   "confidence": "high"
+  },
+  "models/constructor/modules/cooldown_accelerator_legend/cooldown_accelerator_legend.mdl": {
+   "name": "Cyclops",
+   "confidence": "high"
+  },
+  "models/constructor/modules/cooler_epic/cooler_epic.mdl": {
+   "name": "Shiver",
+   "confidence": "high"
+  },
+  "models/constructor/modules/cooler_legend/cooler_legend.mdl": {
+   "name": "Boreas Cooler (not in today's game)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/cooler_lit.mdl": {
+   "name": "CS Taymyr",
+   "confidence": "high"
+  },
+  "models/constructor/modules/cooler_radiator_legend/cooler_radiator_legend.mdl": {
+   "name": "Aquilo",
+   "confidence": "high"
+  },
+  "models/constructor/modules/corrosion_fslot_legend/corrosion_fslot_legend.mdl": {
+   "name": "Shroud",
+   "confidence": "high"
+  },
+  "models/constructor/modules/coupler/coupler.mdl": {
+   "name": "Contact 2M",
+   "confidence": "high"
+  },
+  "models/constructor/modules/coupler/q_coupler_old/coupler.mdl": {
+   "name": "Contact 2M (old model)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/damage_dealer_fslot_legend/damage_dealer_fslot_legend.mdl": {
+   "name": "Jackie",
+   "confidence": "high"
+  },
+  "models/constructor/modules/domkrat_common/domkrat_common.mdl": {
+   "name": "Car jack",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_basic_common/engine_basic_common.mdl": {
+   "name": "Dun horse",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_flat10/engine_flat10.mdl": {
+   "name": "Oyabun",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_heavy_v12/engine_heavy_v12.mdl": {
+   "name": "Razorback",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_heavy_x/engine_heavy_x.mdl": {
+   "name": "Colossus",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_lit.mdl": {
+   "name": "Hardcore",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_v10_legend/engine_v10_legend.mdl": {
+   "name": "Fin whale",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_v8_epic/engine_v8_epic.mdl": {
+   "name": "Cheetah",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_v8_legend/engine_v8_legend.mdl": {
+   "name": "Jaguar",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_wild/engine_wild.mdl": {
+   "name": "Hot red",
+   "confidence": "high"
+  },
+  "models/constructor/modules/engine_x24_legend/engine_x24_legend.mdl": {
+   "name": "Pegasus",
+   "confidence": "high"
+  },
+  "models/constructor/modules/fht_legend/fht_legend.mdl": {
+   "name": "FHT-3 Flock",
+   "confidence": "high"
+  },
+  "models/constructor/modules/fortifier_01_epic/fortifier_01_epic.mdl": {
+   "name": "SF-4 Granite",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/fuel_cyl.mdl": {
+   "name": "Fuel tank",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_base.mdl": {
+   "name": "PU-1 Charge (old model)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/generator_common/generator_common.mdl": {
+   "name": "Toughie",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_danger_epic/generator_danger_epic.mdl": {
+   "name": "Gasgen",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_danger_legend/generator_danger_legend.mdl": {
+   "name": "Thor-6S",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_danger_preepic/generator_danger_preepic.mdl": {
+   "name": "Ampere",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_epic/generator_epic.mdl": {
+   "name": "Bootstrap",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_legend/generator_legend.mdl": {
+   "name": "Apollo IV",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_preepic/generator_preepic.mdl": {
+   "name": "PU-1 Charge",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_rare/generator_rare.mdl": {
+   "name": "Big G",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_rare_02/generator_rare_02.mdl": {
+   "name": "FG Aggregator",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_relict/generator_relict.mdl": {
+   "name": "Odin",
+   "confidence": "high"
+  },
+  "models/constructor/modules/generator_relict_02/generator_relict_02.mdl": {
+   "name": "Thanatos",
+   "confidence": "high"
+  },
+  "models/constructor/modules/interceptor/interceptor.mdl": {
+   "name": "Interceptor",
+   "confidence": "high"
+  },
+  "models/constructor/modules/invis_seeker/invis_seeker.mdl": {
+   "name": "Oculus VI",
+   "confidence": "high"
+  },
+  "models/constructor/modules/military_cab4_drone/military_cab4_drone.mdl": {
+   "name": "Cohort drone",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/plasma_switcher/plasma_switcher.mdl": {
+   "name": "Power unit",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/quadrocopter/q_base_4x3x4.mdl": {
+   "name": "AD-12 Falcon",
+   "confidence": "high"
+  },
+  "models/constructor/modules/quadrocopter/q_base_4x4x4.mdl": {
+   "name": "MD-3 Owl",
+   "confidence": "high"
+  },
+  "models/constructor/modules/quadrocopter/q_mgun.mdl": {
+   "name": "Drone (machine gun)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/quadrocopter/q_mgun_green.mdl": {
+   "name": "Drone (machine gun, green)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/quadrocopter/q_missile.mdl": {
+   "name": "Drone (missiles)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/quadrocopter_self_defence/q_selfdefence.mdl": {
+   "name": "Argus drone",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/quadrocopter_self_defence/q_selfdefence_base.mdl": {
+   "name": "Argus",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/radar/radar_infra.mdl": {
+   "name": "RD-1 Listener",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radar/radar_lit.mdl": {
+   "name": "Maxwell",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radar/radar_old/radar_infra.mdl": {
+   "name": "RD-1 Listener (old model)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/radar_common/radar_common.mdl": {
+   "name": "RS-1 Ruby",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radar_infra_epic/radar_infra_epic.mdl": {
+   "name": "RD-2 Keen",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radar_legend/radar_legend.mdl": {
+   "name": "MPR-8 Slice",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radar_power_epic/radar_power_epic.mdl": {
+   "name": "Doppler",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/radiator_common/radiator_common.mdl": {
+   "name": "R-1 Breeze",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radiator_epic/radiator_epic.mdl": {
+   "name": "RN Seal",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radiator_rare/radiator_rare.mdl": {
+   "name": "R-2 Chill",
+   "confidence": "high"
+  },
+  "models/constructor/modules/radio_common/radio_common.mdl": {
+   "name": "Radio",
+   "confidence": "high"
+  },
+  "models/constructor/modules/resist_fslot_epic/resist_fslot_epic.mdl": {
+   "name": "Averter",
+   "confidence": "high"
+  },
+  "models/constructor/modules/rocket_engine_n/rocket_engine.mdl": {
+   "name": "B-1 Aviator",
+   "confidence": "high"
+  },
+  "models/constructor/modules/rocket_engine_rider_n/rocket_engine_rider.mdl": {
+   "name": "Blastoff",
+   "confidence": "high"
+  },
+  "models/constructor/modules/rocketengine_big_rare_n/rocketengine_big_rare.mdl": {
+   "name": "Hermes",
+   "confidence": "high"
+  },
+  "models/constructor/modules/scntst_device1/scntst_device1.mdl": {
+   "name": "Genesis",
+   "confidence": "high"
+  },
+  "models/constructor/modules/scntst_drone/scntst_drone.mdl": {
+   "name": "Annihilator drone",
+   "confidence": "high"
+  },
+  "models/constructor/modules/scntst_drone/scntst_drone_base.mdl": {
+   "name": "Annihilator",
+   "confidence": "high"
+  },
+  "models/constructor/modules/scntst_reloader/reloader.mdl": {
+   "name": "Tachyon (not in today's game)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/scntst_shield/scntst_shield.mdl": {
+   "name": "Aegis-Prime",
+   "confidence": "high"
+  },
+  "models/constructor/modules/scntst_turretshield/scntst_tbase.mdl": {
+   "name": "Barrier IX",
+   "confidence": "high"
+  },
+  "models/constructor/modules/scntst_turretshield/t_shield.mdl": {
+   "name": "Barrier IX · shield",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/scntst_visor/scntst_visor.mdl": {
+   "name": "Neutrino",
+   "confidence": "high"
+  },
+  "models/constructor/modules/spymodule_epic/spymodule_epic.mdl": {
+   "name": "Enlightenment",
+   "confidence": "high"
+  },
+  "models/constructor/modules/squib/squib_mid.mdl": {
+   "name": "Rift 2M",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stabilizer_02_epic/stabilizer_02_epic.mdl": {
+   "name": "Gyroscope",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stabilizer_03_epic/stabilizer_03_epic.mdl": {
+   "name": "Synchronizer",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stabilizer_04_epic/stabilizer_04_epic.mdl": {
+   "name": "Paris",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stabilizer_epic/stabilizer_epic.mdl": {
+   "name": "Harmonizer",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stealth_epic/stealth_epic.mdl": {
+   "name": "Chameleon Mk2",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stealth_legend/stealth_legend.mdl": {
+   "name": "Yeti",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stealth_preepic/stealth_preepic.mdl": {
+   "name": "Chameleon",
+   "confidence": "high"
+  },
+  "models/constructor/modules/stealth_seeker/stealth_seeker.mdl": {
+   "name": "Verifier · seeker",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/stealth_seeker/stealth_seeker_base.mdl": {
+   "name": "Verifier",
+   "confidence": "high"
+  },
+  "models/constructor/modules/tribal_calciner/tribal_calciner.mdl": {
+   "name": "Tormentor",
+   "confidence": "high"
+  },
+  "models/constructor/modules/tribal_engine/tribal_engine.mdl": {
+   "name": "Oppressor",
+   "confidence": "high"
+  },
+  "models/constructor/modules/turret/t_base_4x2x4.mdl": {
+   "name": "DT Cobra",
+   "confidence": "high"
+  },
+  "models/constructor/modules/turret/t_base_4x4x4.mdl": {
+   "name": "RT Anaconda",
+   "confidence": "high"
+  },
+  "models/constructor/modules/turret/t_base_launcher.mdl": {
+   "name": "Grenadier",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/turret/t_mgun.mdl": {
+   "name": "Turret (machine gun)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/turret/t_mgun_green.mdl": {
+   "name": "Turret (machine gun, green)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/turret/t_missile.mdl": {
+   "name": "Turret (missiles)",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/veh_drone/barrel.mdl": {
+   "name": "Fuze · barrel",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/veh_drone/barrel_diesel.mdl": {
+   "name": "Fuze · barrel, Hyperborea skin",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/veh_drone/drone.mdl": {
+   "name": "Sidekick drone",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/veh_drone/drone_barrel.mdl": {
+   "name": "Fuze drone",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/veh_drone/drone_barrel_diesel.mdl": {
+   "name": "Fuze drone · Hyperborea skin",
+   "confidence": "medium"
+  },
+  "models/constructor/modules/veh_drone/drone_base.mdl": {
+   "name": "Sidekick",
+   "confidence": "high"
+  },
+  "models/constructor/modules/veh_drone/drone_base_barrel.mdl": {
+   "name": "Fuze",
+   "confidence": "high"
+  },
+  "models/constructor/modules/visor.mdl": {
+   "name": "TS-1 Horizon",
+   "confidence": "high"
+  },
+  "models/constructor/modules/weapon_disabler_epic/weapon_disabler_epic.mdl": {
+   "name": "Daze",
+   "confidence": "high"
+  },
+  "models/constructor/modules/zoom_enhancer_preepic/zoom_enhancer_preepic.mdl": {
+   "name": "Iris",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_box_2x1x2.mdl": {
+   "name": "Avia panel small",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_box_4x1x2.mdl": {
+   "name": "Avia panel",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_box_4x1x4.mdl": {
+   "name": "Avia panel large",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_boxlslope_2x1x1.mdl": {
+   "name": "Avia narrow slope",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_boxlslope_2x1x2.mdl": {
+   "name": "Avia slope",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_boxlslope_2x1x4.mdl": {
+   "name": "Avia wide slope",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_boxlslope_corner_2x1x2.mdl": {
+   "name": "Avia strut",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_q_wing_8x1x3.mdl": {
+   "name": "Narrow wing",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_radial_corner_2x2x2.mdl": {
+   "name": "Oblique strut",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_radial_fender_2x2x2.mdl": {
+   "name": "Plane nose",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_radial_q_2x2x1.mdl": {
+   "name": "Oblique slope narrow",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_radial_q_2x2x2.mdl": {
+   "name": "Oblique slope",
+   "confidence": "high"
+  },
+  "models/constructor/structure/avia_const/av_radial_q_2x2x4.mdl": {
+   "name": "Oblique slope wide",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/bumper/bumper.mdl": {
+   "name": "Terribull bar",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/cont_door_4x8x1.mdl": {
+   "name": "Truck door",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/cont_side_1x4x2.mdl": {
+   "name": "Quarter wall",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/cont_side_1x4x4.mdl": {
+   "name": "Half-wall",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/cont_side_1x4x8.mdl": {
+   "name": "Container wall",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/cont_side_2x1x2.mdl": {
+   "name": "Metal box",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/set_cont_slope_fender.mdl": {
+   "name": "Large fender",
+   "confidence": "high"
+  },
+  "models/constructor/structure/junk_const/slope_reverse2x.mdl": {
+   "name": "Twin slope",
+   "confidence": "high"
+  },
+  "models/constructor/structure/military_const/armored_boxes/armored_box_1.mdl": {
+   "name": "Military sideboard",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/military_const/armored_boxes/armored_box_2.mdl": {
+   "name": "Military ram",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/military_const/armored_boxes/armored_box_3.mdl": {
+   "name": "Military spike",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/military_const/armored_fender/armored_fender.mdl": {
+   "name": "Military fender",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/pipe_const/grpipe_2x6.mdl": {
+   "name": "Long pipe shield",
+   "confidence": "high"
+  },
+  "models/constructor/structure/pipe_const/grpipe_slope2x4.mdl": {
+   "name": "Thick pipe mudguard",
+   "confidence": "high"
+  },
+  "models/constructor/structure/raider_const/box_4x1x2.mdl": {
+   "name": "Buggy grille 1",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/box_4x1x4.mdl": {
+   "name": "Buggy grille 2",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/boxslope_1s_4x2x4.mdl": {
+   "name": "Buggy grille 4",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/boxslope_1sl_1x2x4.mdl": {
+   "name": "Buggy grille 3",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/boxslope_1sr_1x2x4.mdl": {
+   "name": "Buggy grille 10",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/boxslope_2s_4x2x4.mdl": {
+   "name": "Buggy grille 5",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/slope_1x2x2.mdl": {
+   "name": "Buggy grille 6",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/slope_2x1x2.mdl": {
+   "name": "Buggy grille 7",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/slope_4x1x1.mdl": {
+   "name": "Buggy grille 8",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/slope_4x1x2.mdl": {
+   "name": "Buggy grille 9",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/raider_const/slope_4x2x2.mdl": {
+   "name": "Grille",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scientists_const/box_2x1x4.mdl": {
+   "name": "Control module",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scientists_const/box_2x2x2.mdl": {
+   "name": "Broken  radiator",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scientists_const/box_2x2x8.mdl": {
+   "name": "Cooling system",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scientists_const/boxslope_2x1x8.mdl": {
+   "name": "Observation pod",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scientists_const/boxslope_2x2x8.mdl": {
+   "name": "Hull back",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scientists_const/boxslope_4x1x4.mdl": {
+   "name": "Ventilation box",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scientists_const/scientist_bumper.mdl": {
+   "name": "Shock absorber",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scientists_const/slope_2x1x2.mdl": {
+   "name": "Air intake",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scientists_const/slope_2x1x4.mdl": {
+   "name": "Hull part",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_armor/armor_long/armor_long.mdl": {
+   "name": "Plank",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_armor/armor_thorns/armor_thorns.mdl": {
+   "name": "Square spikes",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_armor/armorgrid_4x2.mdl": {
+   "name": "Radiator grille",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_armor/armorgrid_4x4.mdl": {
+   "name": "Grille",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_armor/armorplate_4x4.mdl": {
+   "name": "Fence piece",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_armor/wheel_thorns/wheel_thorns.mdl": {
+   "name": "Round spikes",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/boxflat_4x4.mdl": {
+   "name": "Large box",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/bumper_furgon/bumper_furgon.mdl": {
+   "name": "Offroader bumper",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/china/ch_furgon_back.mdl": {
+   "name": "Rear door CX",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/china/ch_furgon_body_side.mdl": {
+   "name": "Minivan sideboard CX",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/china/ch_furgon_fender.mdl": {
+   "name": "Fender CX",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/china/ch_furgon_window.mdl": {
+   "name": "Van window CX",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/fender_flares/fender_flare_1.mdl": {
+   "name": "Outer fender",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/footstep/footstep.mdl": {
+   "name": "Running board",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/furgon_back/furgon_back.mdl": {
+   "name": "Rear door",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/furgon_body_side/furgon_body_side.mdl": {
+   "name": "Minivan sideboard",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/furgon_bort/furgon_bort.mdl": {
+   "name": "Van side",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/furgon_door/furgon_door.mdl": {
+   "name": "Van door",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/furgon_window/furgon_window.mdl": {
+   "name": "Van window",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/muscle/muscle_back.mdl": {
+   "name": "Torino rear bumper",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/muscle/muscle_cap.mdl": {
+   "name": "Torino bonnet",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/muscle/muscle_fender.mdl": {
+   "name": "Torino fender",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/muscle/muscle_front.mdl": {
+   "name": "Torino front bumper",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/scoba_2x2.mdl": {
+   "name": "Brace",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/scrap_holders/holder_2x2fat.mdl": {
+   "name": "Wide strut",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_const/scrap_holders/holder_2x2h.mdl": {
+   "name": "Small strut",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/scrap_holders/holder_2x4reverse.mdl": {
+   "name": "Twin strut",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_const/scrap_holders/holder_arc_4x4.mdl": {
+   "name": "Half arc",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_meele/bumper_arc/bumper_arc.mdl": {
+   "name": "Frontal Protection System",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_meele/claws/claws01.mdl": {
+   "name": "BladeWing",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_meele/claws/claws02.mdl": {
+   "name": "Twin BladeWing",
+   "confidence": "high"
+  },
+  "models/constructor/structure/scrap_meele/spike_1x2/spike_2x2.mdl": {
+   "name": "Spiked Plank",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_meele/spike_1x2/spike_4x1.mdl": {
+   "name": "Spiked plank",
+   "confidence": "medium"
+  },
+  "models/constructor/structure/scrap_meele/sword_01.mdl": {
+   "name": "Hatchet",
+   "confidence": "high"
+  },
+  "models/weapons/airstike_launcher/airstike_launcher.mdl": {
+   "name": "Squall",
+   "confidence": "medium"
+  },
+  "models/weapons/autocannon_2x/autocannon_2x.mdl": {
+   "name": "Cyclone",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_2x/autocannon_2x_cybereast.mdl": {
+   "name": "Cyclone · Syndicate skin",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_airdefense/autocannon_airdefense.mdl": {
+   "name": "AA Gun-4 Starfall",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_closecombat/autocannon_closecombat.mdl": {
+   "name": "Whirl",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_closecombat/autocannon_closecombat_junk.mdl": {
+   "name": "Whirl · skin",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_epic/autocannon_epic.mdl": {
+   "name": "AC64 Joule",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_epic/autocannon_epic_fuse.mdl": {
+   "name": "AC64 Joule (customized)",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_legend/autocannon_legend.mdl": {
+   "name": "AC80 Stillwind",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_legend_02/autocannon_legend_02.mdl": {
+   "name": "AC66 Apogee",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_middlecombat/autocannon_middlecombat.mdl": {
+   "name": "Tempest",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_preepic_short/autocannon_preepic_short.mdl": {
+   "name": "AC62 Therm",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_relict/autocannon_relict.mdl": {
+   "name": "AC96 Anomaly",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_revolver/autocannon_revolver.mdl": {
+   "name": "Nagual",
+   "confidence": "high"
+  },
+  "models/weapons/autocannon_revolver_epic/autocannon_revolver_epic.mdl": {
+   "name": "Queen",
+   "confidence": "high"
+  },
+  "models/weapons/autocanon_cmflak/autocanon_china.mdl": {
+   "name": "AC43 Rapier · skin",
+   "confidence": "high"
+  },
+  "models/weapons/autocanon_cmflak/autocanon_china2.mdl": {
+   "name": "AC43 Rapier · skin",
+   "confidence": "high"
+  },
+  "models/weapons/autocanon_cmflak/autocanon_cmflak.mdl": {
+   "name": "AC43 Rapier",
+   "confidence": "high"
+  },
+  "models/weapons/autocanon_cmflak/autocanon_rdr.mdl": {
+   "name": "AC43 Rapier · skin",
+   "confidence": "high"
+  },
+  "models/weapons/autocanon_preepic/autocanon_preepic.mdl": {
+   "name": "AC50 Storm",
+   "confidence": "high"
+  },
+  "models/weapons/barrel_launcher/barrel.mdl": {
+   "name": "Porcupine · barrel",
+   "confidence": "high"
+  },
+  "models/weapons/barrel_launcher/barrel_launcher.mdl": {
+   "name": "Porcupine",
+   "confidence": "high"
+  },
+  "models/weapons/blade_launcher_legend/blade_launcher_legend.mdl": {
+   "name": "Exodus",
+   "confidence": "medium"
+  },
+  "models/weapons/bomb_launcher_2x_legend/bomb_launcher_2x_legend.mdl": {
+   "name": "B12 Dove",
+   "confidence": "high"
+  },
+  "models/weapons/cannon_assault_legend/cannon_assault_legend.mdl": {
+   "name": "AM-5 Avalanche",
+   "confidence": "high"
+  },
+  "models/weapons/cannon_ballistic_epic/cannon_ballistic_epic.mdl": {
+   "name": "Vendetta",
+   "confidence": "high"
+  },
+  "models/weapons/cannon_oneshot_preepic/cannon_oneshot_preepic.mdl": {
+   "name": "Median",
+   "confidence": "high"
+  },
+  "models/weapons/cannon_ship_legend/cannon_ship_legend.mdl": {
+   "name": "Smasher",
+   "confidence": "high"
+  },
+  "models/weapons/catapult/catapult.mdl": {
+   "name": "Incinerator",
+   "confidence": "high"
+  },
+  "models/weapons/cg_gun/cg_gun.mdl": {
+   "name": "BC-17 Tsunami",
+   "confidence": "high"
+  },
+  "models/weapons/chainsaw/chainsaw.mdl": {
+   "name": "Mauler",
+   "confidence": "high"
+  },
+  "models/weapons/chainsaw/chainsaw_china.mdl": {
+   "name": "Mauler · skin",
+   "confidence": "high"
+  },
+  "models/weapons/chainsaw/chainsaw_rdrskin.mdl": {
+   "name": "Mauler · skin",
+   "confidence": "high"
+  },
+  "models/weapons/chainsaw_dble/chainsaw_dble.mdl": {
+   "name": "Lacerator",
+   "confidence": "high"
+  },
+  "models/weapons/coilgun_legend/coilgun_legend.mdl": {
+   "name": "Kaiju",
+   "confidence": "high"
+  },
+  "models/weapons/corrosion_gun_legend/corrosion_gun_legend.mdl": {
+   "name": "Charon",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_ballista_legend/crossbow_ballista_legend.mdl": {
+   "name": "Commit",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_burst/crossbow_burst.mdl": {
+   "name": "Fukibari",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_double01/crossbow_double01.mdl": {
+   "name": "Toadfish",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_epic/crossbow_epic.mdl": {
+   "name": "Artemis",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_revolver_relict/crossbow_revolver_relict.mdl": {
+   "name": "Sovereign",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_rocket/crossbow_rocket.mdl": {
+   "name": "Spike-1",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_tempo/crossbow_tempo.mdl": {
+   "name": "Varun",
+   "confidence": "high"
+  },
+  "models/weapons/crossbow_tempo_legend/crossbow_tempo_legend.mdl": {
+   "name": "Corax",
+   "confidence": "high"
+  },
+  "models/weapons/drill/drill.mdl": {
+   "name": "Borer",
+   "confidence": "high"
+  },
+  "models/weapons/drill/drill_auger.mdl": {
+   "name": "Borer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/drill/drill_china.mdl": {
+   "name": "Borer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/drill/drill_rdr.mdl": {
+   "name": "Borer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/drone_launcher_epic/drone_launcher_epic.mdl": {
+   "name": "Yaoguai",
+   "confidence": "high"
+  },
+  "models/weapons/drone_launcher_legend/drone_launcher_legend.mdl": {
+   "name": "SD-15 Vulture",
+   "confidence": "high"
+  },
+  "models/weapons/electric_fence_epic/electric_fence_epic.mdl": {
+   "name": "Punji",
+   "confidence": "medium"
+  },
+  "models/weapons/flame_thrower/flame_thrower.mdl": {
+   "name": "Firebug",
+   "confidence": "high"
+  },
+  "models/weapons/flame_thrower/flame_thrower_china.mdl": {
+   "name": "Firebug · skin",
+   "confidence": "high"
+  },
+  "models/weapons/flmthrow_course/flmthrow_course.mdl": {
+   "name": "Draco",
+   "confidence": "high"
+  },
+  "models/weapons/frost_artillery_epic/frost_artillery_epic.mdl": {
+   "name": "Jotun",
+   "confidence": "high"
+  },
+  "models/weapons/frost_gun_legend/frost_gun_legend.mdl": {
+   "name": "Narwhal",
+   "confidence": "high"
+  },
+  "models/weapons/frost_thrower_epic/frost_thrower_epic.mdl": {
+   "name": "Skadi",
+   "confidence": "high"
+  },
+  "models/weapons/fusiongun/fusiongun.mdl": {
+   "name": "Synthesis",
+   "confidence": "high"
+  },
+  "models/weapons/fusiongun_epic/fusiongun_epic.mdl": {
+   "name": "Prometheus V",
+   "confidence": "high"
+  },
+  "models/weapons/fusiongun_legendary/fusiongun_legendary.mdl": {
+   "name": "Helios",
+   "confidence": "high"
+  },
+  "models/weapons/fusiongun_legendary/fusiongun_legendary_oracle.mdl": {
+   "name": "Helios · skin",
+   "confidence": "high"
+  },
+  "models/weapons/fusiongun_relict/fusiongun_relict.mdl": {
+   "name": "Nemesis",
+   "confidence": "high"
+  },
+  "models/weapons/gatling_laser/gatling_laser.mdl": {
+   "name": "Aurora",
+   "confidence": "high"
+  },
+  "models/weapons/gatling_laser/gatling_laser_cybereast.mdl": {
+   "name": "Aurora · Syndicate skin",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher/ags_40.mdl": {
+   "name": "GL-55 Impulse · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher/grenade_launcher.mdl": {
+   "name": "GL-55 Impulse",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher/grenade_launcher_china.mdl": {
+   "name": "GL-55 Impulse · skin",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher_2types_legend/grenade_launcher_2types_legend.mdl": {
+   "name": "Slaughterer",
+   "confidence": "medium"
+  },
+  "models/weapons/grenade_launcher_4x/grenade_launcher_4x.mdl": {
+   "name": "Retcher",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher_4x/grenade_launcher_4x_china.mdl": {
+   "name": "Retcher · skin",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher_4x/grenade_launcher_4x_diesel.mdl": {
+   "name": "Retcher · Hyperborea skin",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher_6x_relict/grenade_launcher_6x_relict.mdl": {
+   "name": "Destroyer",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher_burst/grenade_launcher_burst.mdl": {
+   "name": "Yongwang",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_launcher_epic/grenade_launcher_epic.mdl": {
+   "name": "Thresher",
+   "confidence": "high"
+  },
+  "models/weapons/grenade_system/grenade_system.mdl": {
+   "name": "Bomb discharger (not in today's game)",
+   "confidence": "medium"
+  },
+  "models/weapons/guided_control/clarinet_tow.mdl": {
+   "name": "Clarinet TOW · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/guided_control/guided_control.mdl": {
+   "name": "Clarinet TOW",
+   "confidence": "high"
+  },
+  "models/weapons/guided_lockon_oracle/guided_lockon_oracle_base.mdl": {
+   "name": "Nest",
+   "confidence": "high"
+  },
+  "models/weapons/guided_multy/guided_multy.mdl": {
+   "name": "Hurricane",
+   "confidence": "high"
+  },
+  "models/weapons/guided_multy/hurricane.mdl": {
+   "name": "Hurricane · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/guided_single/guided_pyre.mdl": {
+   "name": "Pyre · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/guided_single/guided_single.mdl": {
+   "name": "Pyre",
+   "confidence": "high"
+  },
+  "models/weapons/guided_single/guided_single_rdrskin.mdl": {
+   "name": "Pyre · skin",
+   "confidence": "high"
+  },
+  "models/weapons/guided_support_epic/guided_support_epic.mdl": {
+   "name": "Trombone",
+   "confidence": "high"
+  },
+  "models/weapons/harpoon_epic/harpoon_epic.mdl": {
+   "name": "Skinner",
+   "confidence": "high"
+  },
+  "models/weapons/harpoon_epic/harpoon_epic_china.mdl": {
+   "name": "Skinner · skin",
+   "confidence": "high"
+  },
+  "models/weapons/harvester/harvester.mdl": {
+   "name": "Harvester",
+   "confidence": "high"
+  },
+  "models/weapons/harvester/harvester_china.mdl": {
+   "name": "Harvester · skin",
+   "confidence": "high"
+  },
+  "models/weapons/harvester/harvester_col.mdl": {
+   "name": "Harvester · skin",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_2types_legend/heavygun_2types_legend.mdl": {
+   "name": "Compiler",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_6pounder/heavygun_6pounder.mdl": {
+   "name": "Avenger 57mm",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_6pounder/heavygun_fieldofficer.mdl": {
+   "name": "Avenger 57mm · skin",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_flak88/heavygun_flak88.mdl": {
+   "name": "Executioner 88mm",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_flak88/heavygun_flak88_executioner.mdl": {
+   "name": "Executioner 88mm · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_flak88/heavygun_flak88china.mdl": {
+   "name": "Executioner 88mm · skin",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_preepic/heavygun_preepic.mdl": {
+   "name": "Prosecutor 76mm",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_turret_6pounder/heavygun_turret_6pounder.mdl": {
+   "name": "Little Boy 6LB",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_turret_6pounder/heavygun_turret_fieldofficer.mdl": {
+   "name": "Little Boy 6LB · skin",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_turret_6pounder/heavygun_turret_littleboy.mdl": {
+   "name": "Little Boy 6LB · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_turret_6pounder/heavygun_turret_rdr.mdl": {
+   "name": "Little Boy 6LB · skin",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_turret_flak88/heavygun_turret_flak88.mdl": {
+   "name": "ZS-46 Mammoth",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_turret_preepic/heavygun_turret_preepic.mdl": {
+   "name": "ZS-33 Hulk",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_turret_zis3/heavygun_turret_zis3.mdl": {
+   "name": "ZS-34 Fat Man",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_zis3/heavygun_zis3.mdl": {
+   "name": "Judge 76mm",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_zis3/heavygun_zis3_fightdragon.mdl": {
+   "name": "Judge 76mm · skin",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_zis3/heavygun_zis3_judge.mdl": {
+   "name": "Judge 76mm · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/heavygun_zis3/heavygun_zis3_rdrskin.mdl": {
+   "name": "Judge 76mm · skin",
+   "confidence": "high"
+  },
+  "models/weapons/impulse_carabine/impulse_carabine.mdl": {
+   "name": "R-37-39 Adapter",
+   "confidence": "high"
+  },
+  "models/weapons/lightning_gun/lightning_gun.mdl": {
+   "name": "Assembler",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_2modes_legend/machinegun_2modes_legend.mdl": {
+   "name": "Hybrid",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_auto/machinegun_auto.mdl": {
+   "name": "Caucasus",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_auto/machinegun_auto_oracle.mdl": {
+   "name": "Caucasus · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_auto/machinegun_caucasus.mdl": {
+   "name": "Caucasus · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_browning/machinegun_browning.mdl": {
+   "name": "LM-54 Chord",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_browning/machinegun_china.mdl": {
+   "name": "LM-54 Chord · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_browning/machinegun_rdr.mdl": {
+   "name": "LM-54 Chord · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_frontal_legend/machinegun_frontal_legend.mdl": {
+   "name": "M-32 Vindicator",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_frontal_preepic/machinegun_frontal_preepic.mdl": {
+   "name": "M-25 Guardian",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_heavy_epic/machinegun_heavy_epic.mdl": {
+   "name": "Gungnir",
+   "confidence": "medium"
+  },
+  "models/weapons/machinegun_heavy_legend/machinegun_heavy_legend.mdl": {
+   "name": "Nothung",
+   "confidence": "medium"
+  },
+  "models/weapons/machinegun_kmtp/machinegun_kmtp.mdl": {
+   "name": "SM Hornet",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_kpvt/machinegun_kpvt.mdl": {
+   "name": "Vector",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_kpvt/machinegun_kpvt_china.mdl": {
+   "name": "Vector · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_kpvt/machinegun_kpvt_course.mdl": {
+   "name": "Swordfish (not in today's game)",
+   "confidence": "medium"
+  },
+  "models/weapons/machinegun_kpvt/mm5_4vector.mdl": {
+   "name": "Vector · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_kpvt_double/machinegun_kpvt_double.mdl": {
+   "name": "Spectre-2",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_kpvt_double/mg_kpvt_double_china.mdl": {
+   "name": "Spectre-2 · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_kpvt_double/mg_kpvt_double_rdr.mdl": {
+   "name": "Spectre-2 · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_kpvt_double/mg_kpvtdouble_spektr.mdl": {
+   "name": "Spectre-2 · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_legendary/machinegun_legendary.mdl": {
+   "name": "Aspect",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_preepic/machinegun_preepic.mdl": {
+   "name": "Sinus-0",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_relict/machinegun_relict.mdl": {
+   "name": "Punisher",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_side_browning1919/machinegun_side_browning1919.mdl": {
+   "name": "ST-M23 Defender",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_side_browning1919/machinegun_side_browning1919_old/machinegun_side_browning1919.mdl": {
+   "name": "ST-M23 Defender (old copy)",
+   "confidence": "medium"
+  },
+  "models/weapons/machinegun_side_browning1919/machinegun_side_epic.mdl": {
+   "name": "M-29 Protector",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_side_browning1919/mg_side_china.mdl": {
+   "name": "ST-M23 Defender · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_side_browning1919/mg_side_rdr.mdl": {
+   "name": "ST-M23 Defender · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_side_browning1919/st_m23_defender.mdl": {
+   "name": "ST-M23 Defender · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_side_kpvt_double/machinegun_side_kpvt_double.mdl": {
+   "name": "ST-M26 Tackler",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_smg/machinegun_smg.mdl": {
+   "name": "M-37 Piercer",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_smg/machinegun_smg_arena.mdl": {
+   "name": "M-37 Piercer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_smg_2/machinegun_smg_2.mdl": {
+   "name": "M-38 Fidget",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_smg_3/machinegun_smg_3.mdl": {
+   "name": "M-39 Imp",
+   "confidence": "high"
+  },
+  "models/weapons/machinegun_smg_3/machinegun_smg_3m2.mdl": {
+   "name": "M-39 Imp · variant",
+   "confidence": "medium"
+  },
+  "models/weapons/mark38_mod2/mark38_chinasecularbird.mdl": {
+   "name": "AC72 Whirlwind · skin",
+   "confidence": "high"
+  },
+  "models/weapons/mark38_mod2/mark38_mod2.mdl": {
+   "name": "AC72 Whirlwind",
+   "confidence": "high"
+  },
+  "models/weapons/mark38_mod2/mark38_whirlwind.mdl": {
+   "name": "AC72 Whirlwind · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/minelayer/mine.mdl": {
+   "name": "King · mine",
+   "confidence": "high"
+  },
+  "models/weapons/minelayer/minelayer.mdl": {
+   "name": "King",
+   "confidence": "high"
+  },
+  "models/weapons/minetrap/minetrap.mdl": {
+   "name": "Kapkan",
+   "confidence": "high"
+  },
+  "models/weapons/minetrap/trap.mdl": {
+   "name": "Kapkan · trap",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_explosive/minigun_explosive.mdl": {
+   "name": "Miller",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_gsh623/minigun_gsh623.mdl": {
+   "name": "Reaper",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_gsh623/minigun_gsh623_china.mdl": {
+   "name": "Reaper · skin",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_legendary/minigun_legendary.mdl": {
+   "name": "MG14 Arbiter",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_legendary/minigun_legendary_w.mdl": {
+   "name": "MG14 Arbiter · skin",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_m134/minigun_m134.mdl": {
+   "name": "MG13 Equalizer",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_m134/minigun_m134_china.mdl": {
+   "name": "MG13 Equalizer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_m134/minigun_m134_equaliizer.mdl": {
+   "name": "MG13 Equalizer · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_m134/minigun_m134_rdrskin.mdl": {
+   "name": "MG13 Equalizer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/minigun_relict/minigun_relict.mdl": {
+   "name": "Devourer",
+   "confidence": "high"
+  },
+  "models/weapons/missile_20x_legend/missile_20x_legend.mdl": {
+   "name": "Lucifer",
+   "confidence": "high"
+  },
+  "models/weapons/missile_38x_legend/missile_38x_legend.mdl": {
+   "name": "Inquisitor",
+   "confidence": "high"
+  },
+  "models/weapons/missile_3x_front_epic/missile_3x_front_epic.mdl": {
+   "name": "Snowfall",
+   "confidence": "high"
+  },
+  "models/weapons/missile_3x_relict/missile_3x_relict.mdl": {
+   "name": "RL-9 Helicon",
+   "confidence": "high"
+  },
+  "models/weapons/missile_3x_spiral_legend/missile_3x_spiral_legend.mdl": {
+   "name": "Waltz",
+   "confidence": "high"
+  },
+  "models/weapons/missile_8x_legend/missile_8x_legend.mdl": {
+   "name": "Swarm",
+   "confidence": "high"
+  },
+  "models/weapons/missile_laser/missile_laser.mdl": {
+   "name": "ATGM Flute",
+   "confidence": "high"
+  },
+  "models/weapons/missile_laser_legend/missile_laser_legend.mdl": {
+   "name": "ATGM Cornet",
+   "confidence": "high"
+  },
+  "models/weapons/missile_plasma_epic/missile_plasma_epic.mdl": {
+   "name": "Yokai",
+   "confidence": "high"
+  },
+  "models/weapons/mortar_cannon/mortar_cannon.mdl": {
+   "name": "Mandrake",
+   "confidence": "high"
+  },
+  "models/weapons/mortar_cannon/mortar_mandrake.mdl": {
+   "name": "Mandrake · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/nail_gun/nail_gun.mdl": {
+   "name": "Summator",
+   "confidence": "high"
+  },
+  "models/weapons/nail_gun_epic/nail_gun_epic.mdl": {
+   "name": "Argument",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_dble/nurs_dble.mdl": {
+   "name": "Locust",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_legend/nurs_legend.mdl": {
+   "name": "Cicada",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_multy/nurs_multy.mdl": {
+   "name": "Cricket",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_multy/nurs_multy_china.mdl": {
+   "name": "Cricket · skin",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_multy/nurs_multy_cricket.mdl": {
+   "name": "Cricket · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_multy/nurs_multy_rdr.mdl": {
+   "name": "Cricket · skin",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_preepic/nurs_preepic.mdl": {
+   "name": "Pyralid",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_single/nurs_single.mdl": {
+   "name": "Wasp",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_single/nurs_single_china.mdl": {
+   "name": "Wasp · skin",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_single/nurs_single_rdr.mdl": {
+   "name": "Wasp · skin",
+   "confidence": "high"
+  },
+  "models/weapons/nurs_single/nurs_single_wasp.mdl": {
+   "name": "Wasp · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_ball_lightning/plasma_ball_lightning.mdl": {
+   "name": "Jupiter",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_cutter/plasma_cutter.mdl": {
+   "name": "Blockchain",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_drill/plasma_drill.mdl": {
+   "name": "Trigger",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_drill_legendary/plasma_drill_legendary.mdl": {
+   "name": "Destructor",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_launcher/plasma_launcher.mdl": {
+   "name": "Quasar",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_launcher/plasma_launcher_fuse.mdl": {
+   "name": "Quasar (customized)",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_launcher_legendary/plasma_launcher_legendary.mdl": {
+   "name": "Pulsar",
+   "confidence": "high"
+  },
+  "models/weapons/plasma_shield_launcher_legend/plasma_shield_launcher_legend.mdl": {
+   "name": "Morta",
+   "confidence": "high"
+  },
+  "models/weapons/plasmasaw_epic/plasmasaw_epic.mdl": {
+   "name": "Tachi",
+   "confidence": "high"
+  },
+  "models/weapons/plasmasaw_preepic/plasmasaw_preepic.mdl": {
+   "name": "Tempura",
+   "confidence": "high"
+  },
+  "models/weapons/railgun_ballista_epic/railgun_ballista_epic.mdl": {
+   "name": "Acari",
+   "confidence": "high"
+  },
+  "models/weapons/railgun_quadro/railgun_quadro.mdl": {
+   "name": "Thyrsus I",
+   "confidence": "high"
+  },
+  "models/weapons/railgun_self_damage_epic/railgun_self_damage_epic.mdl": {
+   "name": "Astraeus",
+   "confidence": "high"
+  },
+  "models/weapons/railgun_turret/railgun.mdl": {
+   "name": "Scorpion",
+   "confidence": "high"
+  },
+  "models/weapons/railgun_turret/railgun_china2.mdl": {
+   "name": "Scorpion · skin",
+   "confidence": "high"
+  },
+  "models/weapons/railgun_turret/railgun_scorpio.mdl": {
+   "name": "Scorpion · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/railgun_turret/railgun_scorpio_no_logo.mdl": {
+   "name": "Scorpion · decorated, no logo",
+   "confidence": "high"
+  },
+  "models/weapons/relict_double_gun/relict_double_gun.mdl": {
+   "name": "ZS-52 Mastodon",
+   "confidence": "high"
+  },
+  "models/weapons/revolver_gun/revolver_gun.mdl": {
+   "name": "Emily",
+   "confidence": "high"
+  },
+  "models/weapons/revolver_gun/revolver_pro.mdl": {
+   "name": "Corvo",
+   "confidence": "high"
+  },
+  "models/weapons/revolver_laser_legend/revolver_laser_legend.mdl": {
+   "name": "Athena",
+   "confidence": "high"
+  },
+  "models/weapons/revolver_legend/revolver_legend.mdl": {
+   "name": "AR-27 Morgan",
+   "confidence": "high"
+  },
+  "models/weapons/rocket_artillery_legend/rocket_artillery_legend.mdl": {
+   "name": "RA-1 Heather",
+   "confidence": "high"
+  },
+  "models/weapons/rpg_rocket_launcher_legend/rpg_rocket_launcher_legend.mdl": {
+   "name": "RPG-105 Darling",
+   "confidence": "high"
+  },
+  "models/weapons/saw/saw.mdl": {
+   "name": "Buzzsaw",
+   "confidence": "high"
+  },
+  "models/weapons/saw/saw_china.mdl": {
+   "name": "Buzzsaw · skin",
+   "confidence": "high"
+  },
+  "models/weapons/saw/saw_col.mdl": {
+   "name": "Buzzsaw · skin",
+   "confidence": "high"
+  },
+  "models/weapons/saw_launcher_relict/saw_launcher_relict.mdl": {
+   "name": "Ripper",
+   "confidence": "high"
+  },
+  "models/weapons/saw_launcher_relict/saw_launcher_relict_football.mdl": {
+   "name": "Ripper · skin",
+   "confidence": "high"
+  },
+  "models/weapons/saw_legendary/saw_legendary.mdl": {
+   "name": "Charybdis",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_2barrel_revolver_legend/shotgun_2barrel_revolver_legend.mdl": {
+   "name": "Split",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_course/shotgun_course.mdl": {
+   "name": "Goblin",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_course_epic/shotgun_course_epic.mdl": {
+   "name": "Gremlin",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_course_legend/shotgun_course_legend.mdl": {
+   "name": "Triton",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_flak01/shotgun_flak01.mdl": {
+   "name": "Arothron",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_garbage_epic/shotgun_garbage_epic.mdl": {
+   "name": "Fafnir",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_garbage_legendary/shotgun_garbage_legendary.mdl": {
+   "name": "Nidhogg",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_garbage_relict/shotgun_garbage_relict.mdl": {
+   "name": "Jormungandr",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_midrange_legend/shotgun_midrange_legend.mdl": {
+   "name": "Parser",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_piper/shotgun_hammerfall.mdl": {
+   "name": "Hammerfall · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_piper/shotgun_piper.mdl": {
+   "name": "Hammerfall",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_popup_legend/shotgun_popup_legend.mdl": {
+   "name": "Extremum",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_preepic/shotgun_preepic.mdl": {
+   "name": "Mace",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_preepic/shotgun_preepic_workers.mdl": {
+   "name": "Mace · skin",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_qbz_double/shotgun_qbz_double.mdl": {
+   "name": "Thunderbolt",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_qbz_double/shotgun_qbz_double_rdrskin.mdl": {
+   "name": "Thunderbolt · skin",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_qbz_double/shotgun_thunderbolt.mdl": {
+   "name": "Thunderbolt · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_relict/shotgun_relict.mdl": {
+   "name": "Breaker",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_relict/shotgun_relict_01.mdl": {
+   "name": "Breaker · variant",
+   "confidence": "medium"
+  },
+  "models/weapons/shotgun_side_preepic/shotgun_side_preepic.mdl": {
+   "name": "Leech",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_side_qbz_double/shotgun_side_qbz_double.mdl": {
+   "name": "Rupture",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_side_xm174/shotgun_side_spitfire.mdl": {
+   "name": "Spitfire · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_side_xm174/shotgun_side_xm174.mdl": {
+   "name": "Spitfire",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_spreadburst_legend/shotgun_spreadburst_legend.mdl": {
+   "name": "Butcher",
+   "confidence": "medium"
+  },
+  "models/weapons/shotgun_striker/shotgun_striker.mdl": {
+   "name": "Sledgehammer",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_striker/shotgun_striker_china.mdl": {
+   "name": "Sledgehammer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_striker/shotgun_striker_china2.mdl": {
+   "name": "Sledgehammer · skin",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_syfy/shotgun_syfy.mdl": {
+   "name": "Gravastar",
+   "confidence": "high"
+  },
+  "models/weapons/shotgun_syfy/shotgun_syfy_cassette.mdl": {
+   "name": "Gravastar · cassette",
+   "confidence": "medium"
+  },
+  "models/weapons/shotgun_xm174/shotgun_xm174.mdl": {
+   "name": "Lupara",
+   "confidence": "high"
+  },
+  "models/weapons/shredder_gun_01/shredder_gun_01.mdl": {
+   "name": "Shredder",
+   "confidence": "medium"
+  },
+  "models/weapons/shredder_gun_01/shredder_gun_01_wheels.mdl": {
+   "name": "Shredder · wheels",
+   "confidence": "medium"
+  },
+  "models/weapons/side_flamethrower/side_flamethrower.mdl": {
+   "name": "Remedy",
+   "confidence": "high"
+  },
+  "models/weapons/side_flamethrower/side_flamethrower_skin.mdl": {
+   "name": "Remedy · skin",
+   "confidence": "high"
+  },
+  "models/weapons/spear_rocket/spear_rocket.mdl": {
+   "name": "Lancelot",
+   "confidence": "high"
+  },
+  "models/weapons/spear_rocket/spear_rocket_brawl.mdl": {
+   "name": "Lancelot · Brawl version",
+   "confidence": "medium"
+  },
+  "models/weapons/spear_rocket/spear_rocket_china.mdl": {
+   "name": "Lancelot · skin",
+   "confidence": "high"
+  },
+  "models/weapons/spear_rocket/spear_rocket_lancelot.mdl": {
+   "name": "Lancelot · decorated",
+   "confidence": "high"
+  },
+  "models/weapons/spear_tnt/spear_tnt.mdl": {
+   "name": "Boom",
+   "confidence": "high"
+  },
+  "models/weapons/spear_tnt/spear_tnt_china.mdl": {
+   "name": "Boom · skin",
+   "confidence": "high"
+  },
+  "models/weapons/sticky_bomb_launcher/sticky_bomb_launcher.mdl": {
+   "name": "Imugi",
+   "confidence": "high"
+  },
+  "models/weapons/t_34_cannon/t_34_cannon.mdl": {
+   "name": "Elephant (old look)",
+   "confidence": "medium"
+  },
+  "models/weapons/t_34_cannon/t_34_cannon_c1.mdl": {
+   "name": "Elephant · variant",
+   "confidence": "medium"
+  },
+  "models/weapons/t_34_cannon/t_34_cannon_diesel.mdl": {
+   "name": "Elephant",
+   "confidence": "high"
+  },
+  "models/weapons/t_34_cannon/t_34_cannon_diesel_fuse.mdl": {
+   "name": "Elephant (customized)",
+   "confidence": "high"
+  },
+  "models/weapons/tankgun_relict/tankgun_relict.mdl": {
+   "name": "CC-18 Typhoon",
+   "confidence": "high"
+  },
+  "models/weapons/tesla_gun/tesla_gun.mdl": {
+   "name": "Spark III",
+   "confidence": "high"
+  },
+  "models/weapons/tesla_gun/tesla_gun_arena.mdl": {
+   "name": "Spark III · skin",
+   "confidence": "high"
+  },
+  "models/weapons/tesla_gun_relict/tesla_gun_relict.mdl": {
+   "name": "Flash I",
+   "confidence": "high"
+  },
+  "models/weapons/train_wheel_launcher_legend/train_wheel_launcher_legend.mdl": {
+   "name": "Thrust",
+   "confidence": "high"
+  },
+  "models/weapons/tribal_trashgun/tribal_trashgun.mdl": {
+   "name": "Junkbow",
+   "confidence": "high"
+  },
+  "models/weapons/trible_crossbow/trible_crossbow.mdl": {
+   "name": "Phoenix",
+   "confidence": "high"
+  },
+  "models/weapons/turret_harpoon_launcher_legendary/turret_harpoon_launcher_lgnd.mdl": {
+   "name": "Jubokko",
+   "confidence": "medium"
+  },
+  "models/weapons/turret_harpoon_launcher_legendary/turret_harpoon_lgnd.mdl": {
+   "name": "Jubokko · turret",
+   "confidence": "medium"
+  },
+  "models/weapons/wheel_launcher/wheel_launcher.mdl": {
+   "name": "Fortune",
+   "confidence": "high"
+  },
+  "models/weapons/wheel_launcher_epic/wheel_launcher_epic.mdl": {
+   "name": "Doom",
+   "confidence": "high"
+  }
+ },
+ "folders": {
+  "models/constructor/chassis/base/buggy_base": "Lightweight frames",
+  "models/constructor/chassis/base/truck_base": "Frames",
+  "models/constructor/chassis/wheels": "Wheels",
+  "models/constructor/modules": "Modules (various)",
+  "models/constructor/modules/turret": "DT Cobra / RT Anaconda / Grenadier",
+  "models/constructor/modules/quadrocopter": "AD-12 Falcon / MD-3 Owl",
+  "models/constructor/modules/veh_drone": "Sidekick / Fuze"
+ },
+ "mains": {
+  "models/constructor/chassis/hovers/hover_jet": "models/constructor/chassis/hovers/hover_jet/hover_jet01.mdl",
+  "models/weapons/t_34_cannon": "models/weapons/t_34_cannon/t_34_cannon_diesel.mdl",
+  "models/constructor/modules/turret": "models/constructor/modules/turret/t_base_4x2x4.mdl",
+  "models/constructor/modules/quadrocopter": "models/constructor/modules/quadrocopter/q_base_4x3x4.mdl",
+  "models/constructor/modules/veh_drone": "models/constructor/modules/veh_drone/drone_base.mdl",
+  "models/constructor/modules/stealth_seeker": "models/constructor/modules/stealth_seeker/stealth_seeker_base.mdl",
+  "models/constructor/modules/quadrocopter_self_defence": "models/constructor/modules/quadrocopter_self_defence/q_selfdefence_base.mdl",
+  "models/constructor/modules/scntst_drone": "models/constructor/modules/scntst_drone/scntst_drone_base.mdl",
+  "models/constructor/modules/scntst_turretshield": "models/constructor/modules/scntst_turretshield/scntst_tbase.mdl"
+ }
+}
