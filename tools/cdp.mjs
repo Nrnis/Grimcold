@@ -54,7 +54,12 @@ export async function launch({ dataDir = null, size = '1500,940', prefix = 'xo-c
     if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
     if (m.method === 'Runtime.consoleAPICalled' && (m.params.type === 'error' || m.params.type === 'warning')) errors.push(m.params.args.map((a) => a.value ?? a.description).join(' '));
   };
-  const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++seq; pending.set(id, { resolve, reject }); ws.send(JSON.stringify({ id, method, params })); });
+  // (the app gone, its page with it: what still waits for an answer fails instead of waiting for good)
+  ws.onclose = () => { for (const p of pending.values()) p.reject(new Error('the app\'s page closed')); pending.clear(); };
+  const send = (method, params = {}) => new Promise((resolve, reject) => {
+    if (ws.readyState >= WebSocket.CLOSING) { reject(new Error('the app\'s page closed')); return; }
+    const id = ++seq; pending.set(id, { resolve, reject }); ws.send(JSON.stringify({ id, method, params }));
+  });
   await send('Runtime.enable');
   await send('Page.enable');
   const js = async (expression) => {

@@ -27,9 +27,14 @@ These terms apply to Grimcold's own code and documentation, in addition to the l
 ## Not affiliated with the game
 
 Grimcold is an unofficial fan tool. It is not made, endorsed or supported by Gaijin Entertainment or
-Targem Games. Crossout and its names, logos, models, textures, sounds and other assets belong to their
-owners; none of them are included in this repository or its releases. The app reads them from the
+Targem Games. Crossout and its names, logos, models, textures, sounds and other assets belong to
+Gaijin Entertainment and Targem Games and their licensors; none of them are included in this repository
+or its releases. The app reads them from the
 user's own installed copy of the game, only reads them, and never changes the game's files or touches
 the running game.
+
+The GPL-3.0 and the terms above cover Grimcold's own code only. They give no rights to the game's
+content, files exported with Grimcold included: their use is subject to the rights holders' terms, and
+sharing, selling or reusing them without their permission can infringe their copyright.
 
 Third-party code and data: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

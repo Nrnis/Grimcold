@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cctype>
+#include <chrono>
 #include <cerrno>
 #include <cmath>
 #include <csignal>
@@ -27,6 +28,11 @@
 #include <random>
 #include <thread>
 #include <vector>
+
+extern "C" __declspec(noreturn) void __stdcall _CxxThrowException(void *pExceptionObject, _ThrowInfo *pThrowInfo) noexcept(false);
+#ifndef _DEBUG
+extern "C" void __cdecl _invalid_parameter(wchar_t const *, wchar_t const *, wchar_t const *, unsigned int, uintptr_t);
+#endif
 
 namespace fs = std::filesystem;
 using Microsoft::WRL::ComPtr;
@@ -69,6 +75,7 @@ constexpr long long kLogMax = 1 << 20; // a log file's size before the next one 
 constexpr int kLogFiles = 5;           // grimcold.log and .1 ... .4
 
 std::mutex g_sendMu;
+std::mutex g_stateMu; // (sending.json: loaded, checked and saved under it, reports side by side included)
 std::string g_dsn = XO_SENTRY_DSN;
 constexpr int kSendsPerDay = 20;
 
@@ -98,7 +105,11 @@ void replaceAll(std::string &s, std::string_view what, std::string_view with, bo
     size_t i = 0;
     while ((i = ifind(s, what, i)) != std::string::npos) {
         const size_t e = i + what.size();
-        if (whole && ((i > 0 && word(s[i - 1])) || (e < s.size() && word(s[e])))) {
+        // (whole words only; and never inside a placeholder already put in, <user> or <pc>: an account
+        // named "user"; any other name in brackets goes)
+        const auto is = [&](std::string_view p) { return what.size() == p.size() && std::equal(what.begin(), what.end(), p.begin(), [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == b; }); };
+        const bool own = is("user") || is("pc");
+        if (whole && ((i > 0 && word(s[i - 1])) || (e < s.size() && word(s[e])) || (own && i > 0 && s[i - 1] == '<' && e < s.size() && s[e] == '>'))) {
             ++i;
             continue;
         }
@@ -194,17 +205,107 @@ const char *exceptionName(DWORD code) {
     case EXCEPTION_DATATYPE_MISALIGNMENT: return "EXCEPTION_DATATYPE_MISALIGNMENT";
     case 0xC0000374: return "STATUS_HEAP_CORRUPTION";
     case 0xE06D7363: return "a C++ exception";
-    case kTerminate: return "std::terminate (a C++ exception nobody caught)";
+    case kTerminate: return "std::terminate (a C++ exception nobody caught, or one through a noexcept function)";
     case kInvalidParameter: return "an invalid parameter to a C runtime function";
     case kPurecall: return "a pure virtual function call";
-    case kAbort: return "abort() (also where a C++ exception nobody caught ends on another thread)"; // (std::set_terminate is per thread in MSVC's runtime: other threads' std::terminate calls abort)
+    case kAbort: return "abort()";
     default: return "an unhandled exception";
     }
 }
 
 wchar_t g_crashDirW[MAX_PATH * 2]; // (ready before anything can crash: the handler allocates nothing it can avoid)
+wchar_t g_runningW[MAX_PATH * 2 + 32]; // (crashes\running.json: watchExit)
 char g_versionA[32] = "0";
-std::atomic<bool> g_crashing{false};
+std::atomic<DWORD> g_crashThread{0}; // (the thread writing a crash's record: one at a time)
+std::atomic<bool> g_testFaultInCrash{false}; // (tests: the crash catcher itself faults)
+HMODULE g_system[3] = {}; // (ntdll, KERNELBASE, kernel32: where RaiseException is, never a crash's cause)
+constexpr int kMaxFrames = 32;
+
+// Milliseconds since 1970: records sort on it (several can fall in one second).
+unsigned long long epochMs() {
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    const unsigned long long t = (static_cast<unsigned long long>(ft.dwHighDateTime) << 32) | ft.dwLowDateTime;
+    return (t - 116444736000000000ULL) / 10000;
+}
+
+// The module a code address is in (its file name only) and the offset into it.
+void whereIs(const void *addr, char *module, size_t moduleSize, unsigned long long &offset) {
+    strcpy_s(module, moduleSize, "?");
+    offset = reinterpret_cast<unsigned long long>(addr);
+    HMODULE m = nullptr;
+    if (addr && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>(addr), &m) && m) {
+        char full[MAX_PATH];
+        if (GetModuleFileNameA(m, full, MAX_PATH)) {
+            const char *base = std::strrchr(full, '\\');
+            strcpy_s(module, moduleSize, base ? base + 1 : full);
+        }
+        offset -= reinterpret_cast<unsigned long long>(m);
+    }
+}
+
+// The code addresses up a crashed thread's stack, from the exception's context, by the x64 unwind
+// data (a stack too broken to follow ends the list where it breaks).
+int walkStack(const CONTEXT *from, void **out, int max) {
+    int n = 0;
+#if defined(_M_X64)
+    __try {
+        CONTEXT c = *from;
+        while (n < max && c.Rip) {
+            PVOID image = nullptr;
+            if (n > 0 && !RtlPcToFileHeader(reinterpret_cast<PVOID>(c.Rip), &image)) // (a return address in no module: not code, the walk has lost its way)
+                break;
+            out[n++] = reinterpret_cast<void *>(c.Rip);
+            const DWORD64 sp = c.Rsp;
+            DWORD64 base = 0;
+            if (const PRUNTIME_FUNCTION f = RtlLookupFunctionEntry(c.Rip, &base, nullptr)) {
+                PVOID data = nullptr;
+                DWORD64 frame = 0;
+                RtlVirtualUnwind(UNW_FLAG_NHANDLER, base, c.Rip, f, &c, &data, &frame, nullptr);
+            } else if (n == 1) { // (the faulting function a leaf: its return address is on top of the stack)
+                c.Rip = *reinterpret_cast<const DWORD64 *>(c.Rsp);
+                c.Rsp += 8;
+            } else { // (code without unwind data further up: stack memory would be taken for frames)
+                break;
+            }
+            if (c.Rsp <= sp) // (no way up: the walk would go round)
+                break;
+        }
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+#else
+    (void)from;
+    (void)out;
+    (void)max;
+#endif
+    return n;
+}
+
+// A frame's address as code to look up: a return address points past its call, maybe into the next
+// function (frame 0 is the faulting instruction itself).
+const void *callSite(void *const *frames, int k) { return static_cast<const char *>(frames[k]) - (k ? 1 : 0); }
+
+// The start of the function code is in, from the x64 unwind data (0: none).
+unsigned long long functionStart(const void *pc) {
+#if defined(_M_X64)
+    DWORD64 base = 0;
+    if (const PRUNTIME_FUNCTION f = RtlLookupFunctionEntry(reinterpret_cast<DWORD64>(pc), &base, nullptr))
+        return base + f->BeginAddress;
+#else
+    (void)pc;
+#endif
+    return 0;
+}
+
+template <typename F> unsigned long long addressOf(F *f) { return reinterpret_cast<unsigned long long>(reinterpret_cast<const void *>(f)); }
+
+bool inSystem(const void *pc) {
+    PVOID base = nullptr;
+    RtlPcToFileHeader(const_cast<PVOID>(pc), &base);
+    return base && std::find(std::begin(g_system), std::end(g_system), static_cast<HMODULE>(base)) != std::end(g_system);
+}
+
+bool onFatalPath(const void *pc); // (raiseFatal, the handlers and the CRT's way to them: below)
 
 struct DumpJob {
     EXCEPTION_POINTERS *ep;
@@ -220,9 +321,12 @@ DWORD WINAPI dumpThread(void *p) {
     if (f == INVALID_HANDLE_VALUE)
         return 1;
     MINIDUMP_EXCEPTION_INFORMATION mei{j->thread, j->ep, FALSE};
+    // (module paths cut to their names, stack memory down to what a stack trace needs: the user's
+    // folder is in both)
     j->ok = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), f,
-                              static_cast<MINIDUMP_TYPE>(MiniDumpNormal | MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules), j->ep ? &mei : nullptr,
-                              nullptr, nullptr);
+                              static_cast<MINIDUMP_TYPE>(MiniDumpNormal | MiniDumpWithThreadInfo | MiniDumpWithUnloadedModules |
+                                                         MiniDumpFilterModulePaths | MiniDumpFilterMemory),
+                              j->ep ? &mei : nullptr, nullptr, nullptr);
     CloseHandle(f);
     return 0;
 }
@@ -236,43 +340,103 @@ void writeFileA(const wchar_t *path, const char *text, size_t n) {
     CloseHandle(f);
 }
 
-// A crash's minidump and summary (crashes\crash-<time>-<pid>.dmp / .json).
+// A crash's summary and minidump (crashes\crash-<time>-<pid>.json / .dmp). The summary goes first
+// (dumped false), so a crash that ends the process while the dump is being written is still offered,
+// and again once the dump is done. A second thread crashing meanwhile waits: the first finishes and
+// ends the process (returning would end it at once, the dump half written, no summary), and should it
+// not within 90 s (stuck behind a lock the second holds), the second ends it. A fault inside this
+// catcher itself ends the process at once, with the record as far as it got.
 void writeCrash(EXCEPTION_POINTERS *ep) {
-    if (g_crashing.exchange(true) || !g_crashDirW[0])
+    if (!g_crashDirW[0])
         return;
+    const DWORD me = GetCurrentThreadId();
+    DWORD owner = 0;
+    if (!g_crashThread.compare_exchange_strong(owner, me)) {
+        if (owner != me)
+            Sleep(90000);
+        TerminateProcess(GetCurrentProcess(), ep && ep->ExceptionRecord ? ep->ExceptionRecord->ExceptionCode : 3);
+        return;
+    }
+    if (g_testFaultInCrash) {
+        volatile int *nowhere = nullptr;
+        *nowhere = 1;
+    }
     SYSTEMTIME t;
     GetLocalTime(&t);
+    const unsigned long long ms = epochMs();
     wchar_t id[80], dmp[MAX_PATH * 2 + 96], js[MAX_PATH * 2 + 96];
     swprintf_s(id, L"crash-%04u%02u%02u-%02u%02u%02u-%lu", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, GetCurrentProcessId());
     swprintf_s(dmp, L"%s\\%s.dmp", g_crashDirW, id);
     swprintf_s(js, L"%s\\%s.json", g_crashDirW, id);
+    const EXCEPTION_RECORD *er = ep ? ep->ExceptionRecord : nullptr;
+    DWORD code = er ? er->ExceptionCode : 0;
+    // The crash's own stack, from its context. where: the exception's address; for abort, terminate, an
+    // invalid parameter or a pure call (raised by raiseFatal: RaiseException's address, the same for
+    // all) the first frame past the way to the handler, for a C++ exception the first past the throw:
+    // the code that called them. The stack kept starts at where.
+    void *frames[kMaxFrames];
+    const int n = ep && ep->ContextRecord ? walkStack(ep->ContextRecord, frames, kMaxFrames) : 0;
+    const bool raised = (code & 0xFFFFFFF0u) == 0xE0000000u, thrown = code == 0xE06D7363u;
+    const void *at = er ? er->ExceptionAddress : nullptr;
+    int first = 0;
+    if (raised) {
+        int last = -1;
+        for (int k = 0; k < n && k < 16; ++k)
+            if (onFatalPath(callSite(frames, k))) {
+                last = k;
+                if (functionStart(callSite(frames, k)) == addressOf(&std::terminate))
+                    code = kTerminate; // (abort by way of std::terminate, on any thread)
+            }
+        if (last >= 0 && last + 1 < n)
+            first = last + 1;
+    }
+    if (code == kTerminate || thrown) {
+        // the exception itself: past its throw (terminate meets one still being dispatched when it hits
+        // a noexcept function or a destructor: Windows' dispatch, RaiseException, _CxxThrowException)
+        for (int k = first; k < n && k < first + 20; ++k)
+            if (functionStart(callSite(frames, k)) == addressOf(&_CxxThrowException)) {
+                if (k + 1 < n)
+                    first = k + 1;
+                break;
+            }
+    }
+    if (first > 0)
+        at = frames[first];
+    char module[MAX_PATH];
+    unsigned long long offset = 0;
+    whereIs(at, module, sizeof module, offset);
+    char stack[2048] = "";
+    size_t used = 0;
+    for (int k = first; k < n; ++k) {
+        char m2[MAX_PATH];
+        unsigned long long o2 = 0;
+        whereIs(frames[k], m2, sizeof m2, o2);
+        const int w = std::snprintf(stack + used, sizeof stack - used, "%s\"%s+0x%llX\"", used ? "," : "", m2, o2);
+        if (w < 0 || static_cast<size_t>(w) >= sizeof stack - used)
+            break;
+        used += static_cast<size_t>(w);
+    }
+    char idA[80];
+    std::snprintf(idA, sizeof idA, "%ls", id);
+    const auto summary = [&](bool dumped) {
+        char text[3072];
+        const int len = std::snprintf(text, sizeof text,
+                                    "{\"id\":\"%s\",\"kind\":\"crash\",\"time\":\"%04u-%02u-%02u %02u:%02u:%02u\",\"ms\":%llu,\"code\":\"0x%08lX\",\"what\":\"%s\","
+                                    "\"module\":\"%s\",\"offset\":\"0x%llX\",\"stack\":[%s],\"version\":\"%s\",\"dumped\":%s}",
+                                    idA, t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, ms, code, exceptionName(code), module, offset, stack,
+                                    g_versionA, dumped ? "true" : "false");
+        if (len > 0)
+            writeFileA(js, text, static_cast<size_t>(std::min(len, static_cast<int>(sizeof text) - 1)));
+    };
+    summary(false);
+    if (g_runningW[0])
+        DeleteFileW(g_runningW); // (this run's end is on record: not "ended unexpectedly" too)
     DumpJob job{ep, GetCurrentThreadId(), dmp, FALSE};
     if (const HANDLE th = CreateThread(nullptr, 0, dumpThread, &job, 0, nullptr)) {
         WaitForSingleObject(th, 60000);
         CloseHandle(th);
     }
-    const DWORD code = ep && ep->ExceptionRecord ? ep->ExceptionRecord->ExceptionCode : 0;
-    void *addr = ep && ep->ExceptionRecord ? ep->ExceptionRecord->ExceptionAddress : nullptr;
-    char module[MAX_PATH] = "?";
-    unsigned long long offset = reinterpret_cast<unsigned long long>(addr);
-    HMODULE m = nullptr;
-    if (addr && GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>(addr), &m) && m) {
-        char full[MAX_PATH];
-        if (GetModuleFileNameA(m, full, MAX_PATH)) {
-            const char *base = std::strrchr(full, '\\');
-            strcpy_s(module, base ? base + 1 : full);
-        }
-        offset -= reinterpret_cast<unsigned long long>(m);
-    }
-    char idA[80], text[1024];
-    std::snprintf(idA, sizeof idA, "%ls", id);
-    const int n = std::snprintf(text, sizeof text,
-                                "{\"id\":\"%s\",\"kind\":\"crash\",\"time\":\"%04u-%02u-%02u %02u:%02u:%02u\",\"code\":\"0x%08lX\",\"what\":\"%s\","
-                                "\"module\":\"%s\",\"offset\":\"0x%llX\",\"version\":\"%s\",\"dumped\":%s}",
-                                idA, t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, code, exceptionName(code), module, offset, g_versionA,
-                                job.ok ? "true" : "false");
-    if (n > 0)
-        writeFileA(js, text, static_cast<size_t>(std::min(n, static_cast<int>(sizeof text) - 1)));
+    summary(job.ok != FALSE);
 }
 
 LONG WINAPI onUnhandled(EXCEPTION_POINTERS *ep) {
@@ -280,12 +444,34 @@ LONG WINAPI onUnhandled(EXCEPTION_POINTERS *ep) {
     return EXCEPTION_EXECUTE_HANDLER; // (the process ends here, quietly: the next start offers the report)
 }
 
-[[noreturn]] void raiseFatal(DWORD code) {
+// abort, std::terminate, an invalid parameter, a pure call: raised as an exception of the app's own so
+// the crash catcher records it (never inlined: its frame on the stack is where the way to it starts).
+[[noreturn]] __declspec(noinline) void raiseFatal(DWORD code) {
     RaiseException(code, EXCEPTION_NONCONTINUABLE, 0, nullptr);
     std::_Exit(3);
 }
 
 void onInvalidParameter(const wchar_t *, const wchar_t *, const wchar_t *, unsigned, uintptr_t) { raiseFatal(kInvalidParameter); }
+void onPurecall() { raiseFatal(kPurecall); }
+// (UCRT's raise resets SIGABRT to SIG_DFL before calling this: re-armed, a second abort elsewhere meanwhile
+// still comes here instead of ending the process in the middle of the first one's record)
+void onAbortSignal(int) {
+    std::signal(SIGABRT, onAbortSignal);
+    raiseFatal(kAbort);
+}
+
+// Whether code is on the way from a fatal call to the crash catcher: raiseFatal, the handlers, the
+// CRT functions between (abort -> raise; terminate -> abort; _invalid_parameter_noinfo; _purecall).
+// By the function it is in, from the x64 unwind data.
+bool onFatalPath(const void *pc) {
+    const unsigned long long start = functionStart(pc);
+    if (!start)
+        return false;
+    const unsigned long long path[] = {addressOf(&raiseFatal), addressOf(&onInvalidParameter), addressOf(&onPurecall), addressOf(&onAbortSignal),
+                                       addressOf(&std::abort), addressOf(&std::raise), addressOf(&std::terminate), addressOf(&_invalid_parameter),
+                                       addressOf(&_invalid_parameter_noinfo), addressOf(&_invalid_parameter_noinfo_noreturn), addressOf(&_purecall)};
+    return std::find(std::begin(path), std::end(path), start) != std::end(path);
+}
 
 // A crash record that is no crash of the app: its page's process, or a test.
 void writeRecord(const ujson::Value &rec) {
@@ -523,9 +709,11 @@ void saveState(const SendState &st) {
     const std::string s = v.dump();
     std::error_code ec;
     fs::create_directories(g_crashDir, ec);
-    if (FILE *f = _wfsopen((g_crashDir / L"sending.json").c_str(), L"wb", _SH_DENYNO)) {
+    const fs::path tmp = g_crashDir / L"sending.json.part"; // (written whole, then put in place: never read half written)
+    if (FILE *f = _wfsopen(tmp.c_str(), L"wb", _SH_DENYNO)) {
         std::fwrite(s.data(), 1, s.size(), f);
         std::fclose(f);
+        MoveFileExW(tmp.c_str(), (g_crashDir / L"sending.json").c_str(), MOVEFILE_REPLACE_EXISTING);
     }
 }
 
@@ -591,6 +779,59 @@ void fillEvent(ujson::Value &ev, const std::string &eventId) {
     ev.set("contexts", std::move(ctx));
 }
 
+// The event's strings without the user's folder and names; its keys stay as they are (an account
+// named "User" turned the "user" key into "<user>").
+ujson::Value redactValues(const ujson::Value &v) {
+    if (v.isString())
+        return ujson::Value(redact(v.str()));
+    if (v.isArray()) {
+        ujson::Value a = ujson::Value::array();
+        for (const auto &x : v.items())
+            a.push(redactValues(x));
+        return a;
+    }
+    if (v.isObject()) {
+        ujson::Value o = ujson::Value::object();
+        for (const auto &m : v.members())
+            o.set(m.first, redactValues(m.second));
+        return o;
+    }
+    return v;
+}
+
+// A minidump's bytes with the user's name, the computer's and the profile folder's overwritten in
+// place, as text and as UTF-16: the same length, so the dump stays readable. Only where a name stands
+// as a word of its own: an account named "User" leaves USER32.dll as it is.
+void scrubDump(std::string &d) {
+    const auto wordAt = [&](size_t i, bool wide) { // (a letter, digit or _ at byte i)
+        return i < d.size() && word(d[i]) && (!wide || (i + 1 < d.size() && d[i + 1] == '\0'));
+    };
+    std::vector<std::string> names;
+    const size_t cut = g_profile.find_last_of('\\');
+    for (const std::string &n : {g_user, g_pc, cut == std::string::npos ? std::string() : g_profile.substr(cut + 1)})
+        if (n.size() >= 3 && wide(n).size() >= 2) // (one CJK letter, 3 bytes, would match all over a dump)
+            names.push_back(n);
+    // (the longest first: a profile folder "name.DOMAIN" whole, not "____.DOMAIN")
+    std::sort(names.begin(), names.end(), [](const std::string &a, const std::string &b) { return a.size() > b.size(); });
+    for (const auto &n : names) {
+        for (size_t i = 0; (i = ifind(d, n, i)) != std::string::npos; ++i) {
+            if ((i > 0 && wordAt(i - 1, false)) || wordAt(i + n.size(), false))
+                continue;
+            std::fill(d.begin() + static_cast<std::ptrdiff_t>(i), d.begin() + static_cast<std::ptrdiff_t>(i + n.size()), '_');
+        }
+        const std::wstring w = wide(n);
+        std::string w16(reinterpret_cast<const char *>(w.data()), w.size() * sizeof(wchar_t));
+        for (size_t i = 0; (i = ifind(d, w16, i)) != std::string::npos; ++i) {
+            if ((i >= 2 && wordAt(i - 2, true)) || wordAt(i + w16.size(), true))
+                continue;
+            for (size_t k = 0; k < w16.size(); k += 2) {
+                d[i + k] = '_';
+                d[i + k + 1] = '\0';
+            }
+        }
+    }
+}
+
 } // namespace
 
 // ---- the public part ----------------------------------------------------------------------------
@@ -604,7 +845,10 @@ void init(const fs::path &dataDir, const char *version) {
     std::error_code ec;
     fs::create_directories(g_logDir, ec);
     fs::create_directories(g_crashDir, ec);
+    WIN32_FILE_ATTRIBUTE_DATA logInfo{}; // (the last run's last line: when it was last alive, for an "exit" record)
+    const bool hadLog = GetFileAttributesExW(logFile(0).c_str(), GetFileExInfoStandard, &logInfo) != 0;
     wcsncpy_s(g_crashDirW, g_crashDir.wstring().c_str(), _TRUNCATE);
+    wcsncpy_s(g_runningW, (g_crashDir / L"running.json").wstring().c_str(), _TRUNCATE);
     // what redact() takes out: the user's folder, the user's and the computer's names
     g_profile = envUtf8(L"USERPROFILE");
     g_user = envUtf8(L"USERNAME");
@@ -615,12 +859,70 @@ void init(const fs::path &dataDir, const char *version) {
     }
     ULONG keep = 64 * 1024; // (stack kept for the crash catcher after a stack overflow on this thread)
     SetThreadStackGuarantee(&keep);
+    g_system[0] = GetModuleHandleW(L"ntdll.dll");
+    g_system[1] = GetModuleHandleW(L"KERNELBASE.dll");
+    g_system[2] = GetModuleHandleW(L"kernel32.dll");
     SetUnhandledExceptionFilter(onUnhandled);
-    std::set_terminate([] { raiseFatal(kTerminate); });
+    // (no std::set_terminate: UCRT's terminate() swallows what its handler raises, then calls abort,
+    // whose stack names the terminate)
     _set_invalid_parameter_handler(onInvalidParameter);
-    _set_purecall_handler([] { raiseFatal(kPurecall); });
+    _set_purecall_handler(onPurecall);
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
-    std::signal(SIGABRT, [](int) { raiseFatal(kAbort); });
+    std::signal(SIGABRT, onAbortSignal);
+    // The last run left its running.json (watchExit): it ended without closing and without a crash
+    // record. Fail-fast ends (heap corruption, a broken stack cookie, __fastfail) skip every handler
+    // above; so do Task Manager and a power cut.
+    const fs::path running = g_crashDir / L"running.json";
+    if (fs::exists(running, ec)) {
+        ujson::Value last;
+        try {
+            last = ujson::Value::parse(readBytes(running, 4096));
+        } catch (...) {
+        }
+        ujson::Value rec = ujson::Value::object();
+        rec.set("id", "crash-" + stamp(true) + "-exit" + randomHex(4));
+        rec.set("kind", "exit");
+        std::string time = last["time"].str(stamp().substr(0, 19));
+        double ms = last["ms"].num(static_cast<double>(epochMs()));
+        if (hadLog) { // (dated by the run's last line in the log, nearer its end than its start)
+            const unsigned long long t = (static_cast<unsigned long long>(logInfo.ftLastWriteTime.dwHighDateTime) << 32) | logInfo.ftLastWriteTime.dwLowDateTime;
+            const double logMs = static_cast<double>((t - 116444736000000000ULL) / 10000);
+            FILETIME local;
+            SYSTEMTIME st;
+            if (logMs > ms && FileTimeToLocalFileTime(&logInfo.ftLastWriteTime, &local) && FileTimeToSystemTime(&local, &st)) {
+                char b[32];
+                std::snprintf(b, sizeof b, "%04u-%02u-%02u %02u:%02u:%02u", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+                time = b;
+                ms = logMs;
+            }
+        }
+        rec.set("time", time);
+        rec.set("ms", ms);
+        rec.set("code", "");
+        rec.set("what", "Grimcold ended unexpectedly, without a crash report");
+        rec.set("version", last["version"].str(g_version));
+        rec.set("dumped", false);
+        writeRecord(rec);
+        fs::remove(running, ec);
+    }
+}
+
+void watchExit() {
+    ujson::Value v = ujson::Value::object();
+    v.set("pid", static_cast<double>(GetCurrentProcessId()));
+    v.set("version", g_version);
+    v.set("time", stamp().substr(0, 19));
+    v.set("ms", static_cast<double>(epochMs()));
+    const std::string s = v.dump();
+    if (FILE *f = _wfsopen(g_runningW, L"wb", _SH_DENYNO)) {
+        std::fwrite(s.data(), 1, s.size(), f);
+        std::fclose(f);
+    }
+}
+
+void stopWatching() {
+    if (g_runningW[0])
+        DeleteFileW(g_runningW);
 }
 
 std::string redact(std::string s) {
@@ -736,24 +1038,48 @@ ujson::Value system(HWND hwnd, ICoreWebView2Environment *env) {
 
 ujson::Value crashes() {
     std::vector<std::pair<std::string, ujson::Value>> found;
+    std::vector<fs::path> dumps;
     std::error_code ec;
     for (const auto &e : fs::directory_iterator(g_crashDir, ec)) {
-        if (e.path().extension() != L".json" || e.path().filename() == L"sending.json")
+        if (e.path().extension() == L".dmp") {
+            dumps.push_back(e.path());
+            continue;
+        }
+        if (e.path().extension() != L".json" || e.path().filename() == L"sending.json" || e.path().filename() == L"running.json")
             continue;
         const std::string text = readBytes(e.path(), 1 << 16);
+        fs::path dmp = e.path();
+        dmp.replace_extension(L".dmp");
         try {
             ujson::Value v = ujson::Value::parse(text);
             const std::string id = v["id"].str();
             if (!validId(id))
                 continue;
-            const fs::path dmp = g_crashDir / (wide(id) + L".dmp");
+            if (!v["dumped"].boolean(false) && fs::exists(dmp, ec))
+                fs::remove(dmp, ec); // (the process ended while its dump was written: half a dump is no use)
             v.set("dump", fs::exists(dmp, ec) ? static_cast<double>(fs::file_size(dmp, ec)) : 0.0);
             found.emplace_back(id, std::move(v));
         } catch (...) {
             fs::remove(e.path(), ec); // (a summary cut short as the crash ended the app)
+            fs::remove(dmp, ec);      // (and its dump with it)
         }
     }
-    std::sort(found.begin(), found.end(), [](const auto &a, const auto &b) { return a.second["time"].str() < b.second["time"].str(); });
+    for (const auto &d : dumps) { // a dump without a summary: gone once it is a minute old (one being written now is left)
+        fs::path j = d;
+        j.replace_extension(L".json");
+        if (fs::exists(j, ec))
+            continue;
+        const auto when = fs::last_write_time(d, ec);
+        if (!ec && fs::file_time_type::clock::now() - when > std::chrono::minutes(1))
+            fs::remove(d, ec);
+    }
+    // oldest first: on their milliseconds (several fall in one second), else their time
+    std::stable_sort(found.begin(), found.end(), [](const auto &a, const auto &b) {
+        const double ma = a.second["ms"].num(0), mb = b.second["ms"].num(0);
+        if (ma > 0 && mb > 0 && ma != mb)
+            return ma < mb;
+        return a.second["time"].str() < b.second["time"].str();
+    });
     while (found.size() > 10) { // (the oldest go: ten waiting is plenty)
         dropCrash(found.front().first);
         found.erase(found.begin());
@@ -783,6 +1109,7 @@ void processFailed(const char *what, int exitCode, const std::string &reason) {
     rec.set("kind", std::strcmp(what, "page") == 0 ? "page" : "webview");
     const std::string t = stamp();
     rec.set("time", t.substr(0, 19));
+    rec.set("ms", static_cast<double>(epochMs()));
     char code[16];
     std::snprintf(code, sizeof code, "0x%08X", static_cast<unsigned>(exitCode));
     rec.set("code", code);
@@ -809,6 +1136,7 @@ void testCrashRecord() {
     rec.set("id", "crash-" + stamp(true) + "-test" + randomHex(4));
     rec.set("kind", "crash");
     rec.set("time", stamp().substr(0, 19));
+    rec.set("ms", static_cast<double>(epochMs()));
     rec.set("code", "0xC0000005");
     rec.set("what", "EXCEPTION_ACCESS_VIOLATION");
     rec.set("module", "Grimcold.exe");
@@ -829,6 +1157,19 @@ int deeper(volatile int n) {
 }
 } // namespace
 
+ujson::Value testScrub(const std::string &text) {
+    const std::wstring w = wide(text);
+    std::string d = text;
+    d.append(reinterpret_cast<const char *>(w.data()), w.size() * sizeof(wchar_t));
+    scrubDump(d);
+    std::wstring back(w.size(), L'\0');
+    std::memcpy(back.data(), d.data() + text.size(), w.size() * sizeof(wchar_t));
+    ujson::Value o = ujson::Value::object();
+    o.set("text", d.substr(0, text.size()));
+    o.set("wide", utf8(back));
+    return o;
+}
+
 void testCrashNow(const std::string &kind) {
     if (kind == "stack") { // a stack overflow (the handler has the stack SetThreadStackGuarantee kept)
         deeper(0);
@@ -841,6 +1182,15 @@ void testCrashNow(const std::string &kind) {
         strcpy_s(nowhere, 4, "abc");
     } else if (kind == "purecall") {
         _purecall();
+    } else if (kind == "two") { // two threads crashing at once (the second waits for the first's dump)
+        std::thread a([] { volatile int *p = nullptr; *p = 1; });
+        std::thread b([] { volatile int *p = nullptr; *p = 2; });
+        a.join();
+        b.join();
+    } else if (kind == "fastfail") { // an end no handler sees (as heap corruption ends): only watchExit tells
+        __fastfail(FAST_FAIL_FATAL_APP_EXIT);
+    } else if (kind == "inside") { // the crash catcher itself faults: the process must still end
+        g_testFaultInCrash = true;
     }
     volatile int *nowhere = nullptr;
     *nowhere = 1; // (an access violation: the crash catcher writes its minidump and the app ends)
@@ -860,24 +1210,45 @@ ujson::Value send(const ujson::Value &event, const std::string &crashId, bool at
         r.set("error", "this build sends no reports");
         return r;
     }
-    SendState st = loadState();
     const double now = unixNow();
-    if (st.waitUntil > now) {
-        r.set("error", "the report server asked to wait; try again later");
-        return r;
+    { // (the day's slot is taken before sending: reports sent side by side cannot pass the limit)
+        std::lock_guard lk(g_stateMu);
+        SendState st = loadState();
+        if (st.waitUntil > now) {
+            r.set("error", "the report server asked to wait; try again later");
+            return r;
+        }
+        if (st.day != today()) {
+            st.day = today();
+            st.count = 0;
+        }
+        if (st.count >= kSendsPerDay) {
+            r.set("error", "enough reports for today (" + std::to_string(kSendsPerDay) + "); thank you");
+            return r;
+        }
+        ++st.count;
+        saveState(st);
     }
-    if (st.day != today()) {
-        st.day = today();
-        st.count = 0;
-    }
-    if (st.count >= kSendsPerDay) {
-        r.set("error", "enough reports for today (" + std::to_string(kSendsPerDay) + "); thank you");
-        return r;
-    }
+    struct Slot { // (not sent, however it ends, a throw included: the slot is free again)
+        bool sent = false;
+        ~Slot() {
+            if (sent)
+                return;
+            try {
+                std::lock_guard lk(g_stateMu);
+                SendState st = loadState();
+                if (st.count > 0 && st.day == today()) {
+                    --st.count;
+                    saveState(st);
+                }
+            } catch (...) {
+            }
+        }
+    } slot;
     ujson::Value ev = event.isObject() ? event : ujson::Value::object();
     const std::string eventId = randomHex(32);
     fillEvent(ev, eventId);
-    const std::string payload = redact(ev.dump());
+    const std::string payload = redactValues(ev).dump();
     std::string body = "{\"event_id\":\"" + eventId + "\",\"sent_at\":\"" + isoUtcNow() + "\"}\n";
     body += "{\"type\":\"event\",\"length\":" + std::to_string(payload.size()) + ",\"content_type\":\"application/json\"}\n" + payload + "\n";
     if (attachLog) {
@@ -888,7 +1259,8 @@ ujson::Value send(const ujson::Value &event, const std::string &crashId, bool at
         body += "{\"type\":\"attachment\",\"length\":" + std::to_string(text.size()) + ",\"filename\":\"grimcold.log\",\"content_type\":\"text/plain\"}\n" + text + "\n";
     }
     if (!crashId.empty() && validId(crashId)) {
-        const std::string dump = readBytes(g_crashDir / (wide(crashId) + L".dmp"), 64u << 20);
+        std::string dump = readBytes(g_crashDir / (wide(crashId) + L".dmp"), 64u << 20);
+        scrubDump(dump);
         if (!dump.empty())
             body += "{\"type\":\"attachment\",\"length\":" + std::to_string(dump.size()) + ",\"filename\":\"" + crashId +
                     ".dmp\",\"attachment_type\":\"event.minidump\"}\n" + dump + "\n";
@@ -898,8 +1270,12 @@ ujson::Value send(const ujson::Value &event, const std::string &crashId, bool at
     const Http h = post(d, body, headers);
     r.set("status", h.status);
     if (h.status == 429) {
-        st.waitUntil = now + (h.retryAfter > 0 ? h.retryAfter : 60);
-        saveState(st);
+        {
+            std::lock_guard lk(g_stateMu);
+            SendState st = loadState();
+            st.waitUntil = std::max(st.waitUntil, now + (h.retryAfter > 0 ? h.retryAfter : 60));
+            saveState(st);
+        }
         r.set("error", "the report server is busy; try again later");
         return r;
     }
@@ -908,8 +1284,7 @@ ujson::Value send(const ujson::Value &event, const std::string &crashId, bool at
         log("host", "a report was not sent: " + r["error"].str());
         return r;
     }
-    ++st.count;
-    saveState(st);
+    slot.sent = true;
     if (!crashId.empty())
         dropCrash(crashId);
     r.set("ok", true);

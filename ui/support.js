@@ -39,9 +39,12 @@ const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 // ---- what happened: breadcrumbs, problems, the log ----------------------------------------------
 
 // A step the user took (the report's breadcrumbs): category, what.
+let keepTimer = 0;
 export function crumb(category, message) {
   crumbs.push({ timestamp: Date.now() / 1000, category, message: clip(String(message), 200), level: 'info' });
   if (crumbs.length > MAX_CRUMBS) crumbs.shift();
+  clearTimeout(keepTimer);
+  keepTimer = setTimeout(keep, 1000); // (kept for the page's own reloads, as the problems are)
 }
 
 function logLine(text) {
@@ -64,13 +67,14 @@ window.addEventListener('pagehide', () => { try { flushLog(); } catch { /* going
 // page is loaded again by the host): kept for the session, shown as before the reload.
 const KEEP = 'xo.support.problems';
 function keep() {
-  try { sessionStorage.setItem(KEEP, JSON.stringify({ lost: lostCount, problems: problems.slice(-20).map((p) => ({ ...p, stack: clip(p.stack, 1500), time: p.time.toISOString() })) })); } catch { /* no storage: this page's alone */ }
+  try { sessionStorage.setItem(KEEP, JSON.stringify({ lost: lostCount, crumbs: crumbs.slice(-MAX_CRUMBS), problems: problems.slice(-20).map((p) => ({ ...p, stack: clip(p.stack, 1500), time: p.time.toISOString() })) })); } catch { /* no storage: this page's alone */ }
 }
 function restore() {
   try {
     const k = JSON.parse(sessionStorage.getItem(KEEP) || 'null');
     if (!k) return;
     lostCount = k.lost || 0;
+    for (const c of k.crumbs || []) crumbs.push(c);
     for (const p of k.problems || []) problems.push({ ...p, time: new Date(p.time), before: true });
   } catch { /* none */ }
 }
@@ -121,7 +125,7 @@ window.addEventListener('unhandledrejection', (e) => {
     error.apply(console, args);
     try {
       const text = args.map(fmt).join(' ');
-      const lost = performance.now() - lostAt < 5000 || !!ctx?.viewer.renderer.getContext().isContextLost?.();
+      const lost = performance.now() - lostAt < 5000 || !!ctx?.viewer?.renderer.getContext().isContextLost?.();
       if (/Shader Error|VALIDATE_STATUS|CONTEXT_LOST|WebGLProgram/i.test(text) && !lost) note('shader', 'ShaderError', text, '', 'console');
       else logLine(`console.error: ${text}`); // (shaders failing while the context is gone: the loss is the problem)
     } catch { /* never let reporting break the page */ }
@@ -137,13 +141,15 @@ document.addEventListener('click', (e) => {
   const el = e.target?.closest?.('button, [role=tab], a, summary, .row-item, .map-row, label');
   if (!el || el.closest('.support-card')) return;
   const id = el.id ? `#${el.id}` : '', view = el.dataset?.view ? `[${el.dataset.view}]` : '';
-  const text = clip((el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' '), 48);
+  const row = el.matches('.row-item, .map-row'); // (a list row can show a name the user gave the part: no text)
+  const text = row ? '' : clip((el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' '), 48);
   crumb('ui.click', `${el.tagName.toLowerCase()}${id}${view}${text ? ` "${text}"` : ''}`);
 }, true);
 
 // ---- the details --------------------------------------------------------------------------------
 
 function webgl() {
+  if (!ctx.viewer) return { renderer: '', vendor: '', maxTexture: 0, programs: 0, textures: 0, geometries: 0, lost: lostCount, bcTextures: false, none: true };
   const r = ctx.viewer.renderer, gl = r.getContext();
   let renderer = '', vendor = '';
   try {
@@ -163,7 +169,7 @@ function settings() {
 
 // Everything a report shows: the host's part (machine, game, log, crashes) and the page's.
 async function gather() {
-  const host = await ctx.call('diagnostics', { lines: 200 });
+  const host = await ctx.call('diagnostics', { lines: 300 }); // (as many as a report attaches: report.cpp send)
   crashesWaiting = host.crashes || crashesWaiting;
   return { host, page: { where: where(), webgl: webgl(), settings: settings(), problems: problems.map((p) => ({ type: p.type, message: p.message, count: p.count, where: p.where, sent: p.sent })) } };
 }
@@ -175,7 +181,7 @@ export function detailsText(info, { full = true } = {}) {
   L.push(`- ${os.name || 'Windows'}${os.version ? ' ' + os.version : ''} (build ${os.build}, ${os.arch})`);
   L.push(`- CPU: ${h.cpu?.name || '?'}, ${h.cpu?.threads} threads · RAM ${h.memory?.total} GB (${h.memory?.free} GB free)`);
   for (const g of h.gpus || []) L.push(`- GPU: ${g.name}, driver ${g.driver || '?'}, ${g.vram} GB`);
-  L.push(`- WebGL: ${p.webgl.renderer || '?'} · max texture ${p.webgl.maxTexture}${p.webgl.bcTextures ? '' : ' · no BC textures'}${p.webgl.lost ? ` · context lost ${p.webgl.lost} time(s)` : ''}`);
+  L.push(p.webgl.none ? '- WebGL: not available' : `- WebGL: ${p.webgl.renderer || '?'} · max texture ${p.webgl.maxTexture}${p.webgl.bcTextures ? '' : ' · no BC textures'}${p.webgl.lost ? ` · context lost ${p.webgl.lost} time(s)` : ''}`);
   L.push(`- WebView2 ${h.webview2 || '?'} · ${d.dpi} dpi (${Math.round((d.scale || 1) * 100)} %), window ${d.width} × ${d.height}`);
   L.push(`- Crossout ${h.game?.found ? h.game.version || '(version unknown)' : 'not found'}`);
   L.push(`- Where: ${p.where || '?'}`);
@@ -183,18 +189,33 @@ export function detailsText(info, { full = true } = {}) {
   if (s) L.push(`- Settings: ${s}`);
   if ((h.crashes || []).length) {
     L.push('', '**Crashes since the last start**');
-    for (const c of h.crashes) L.push(`- ${c.time}: ${crashLine(c)}`);
+    for (const c of h.crashes) {
+      L.push(`- ${c.time}: ${crashLine(c)}`);
+      if (c.stack?.length) L.push(`  - frames: ${c.stack.slice(0, 10).join(', ')}`);
+    }
   }
   if (p.problems.length) {
     L.push('', '**Problems this session**');
     for (const q of p.problems.slice(-12)) L.push(`- ${q.count > 1 ? q.count + '× ' : ''}${q.type}: ${clip(q.message, 300)} (${q.where})`);
   }
   if (full && h.log?.length) L.push('', `<details><summary>Log (${h.log.length === 1 ? 'the last line' : `the last ${h.log.length} lines`})</summary>`, '', '```', ...h.log, '```', '</details>');
+  if (full && reports) L.push('', `A report also carries the last ${crumbs.length} steps taken in the app (what was clicked, never text typed), a random install ID${(h.crashes || []).some((c) => c.dump) ? ' and the crash\'s minidump (with the names taken out)' : ''}.`);
   return L.join('\n');
+}
+
+// The details as they may leave the app: the page's own free text (its errors can name files in the
+// user's folder) through the host's redact, as the log and the host's details already are; never the
+// details' own words (an account named "texture" would take "max texture" apart).
+async function details(info, opts) {
+  const red = async (s) => { const text = String(s ?? ''); try { return String(await ctx.call('redact', { text })); } catch { return text; } };
+  const p = info.page;
+  const problems = await Promise.all(p.problems.map(async (q) => ({ ...q, message: await red(q.message), where: await red(q.where) })));
+  return detailsText({ ...info, page: { ...p, where: await red(p.where), problems } }, opts);
 }
 
 function crashLine(c) {
   if (c.kind === 'crash') return `the app crashed: ${c.what} in ${c.module}+${c.offset} (${c.code})${c.dump ? ', minidump kept' : ''}`;
+  if (c.kind === 'exit') return `${c.what || 'Grimcold ended unexpectedly'}${c.version ? ` (version ${c.version})` : ''}`;
   return `${c.what}${c.reason ? ` (${c.reason})` : ''}, exit code ${c.code}`;
 }
 
@@ -224,22 +245,35 @@ async function copy(text) {
 const handle = (h) => typeof h === 'string' && /^[A-Za-z0-9._-]{1,60}$/.test(h);
 const repoUrl = () => (/^https:\/\/github\.com\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/.test(links.repo || '') ? links.repo : '');
 
-// The GitHub issue form filled in (bug_report.yml's fields); the details too long for a link stay
-// on the clipboard instead.
-function issueUrl(info, title) {
+// The GitHub issue form filled in (bug_report.yml's fields). Details that would make the link longer
+// than Windows reliably hands to the browser go on the clipboard instead.
+const MAX_LINK = 2000;
+function issueUrl(info, title, text, placeholder = '') {
   const repo = repoUrl();
   if (!repo) return '';
-  const q = new URLSearchParams({ template: 'bug_report.yml', title: title || '', version: info.host.app?.version || '', diagnostics: detailsText(info, { full: false }) });
-  if (`${repo}/issues/new?${q}`.length > 7000) q.set('diagnostics', '(The app copied the details: paste them here.)');
+  const q = new URLSearchParams({ template: 'bug_report.yml', title: title || '', version: info.host.app?.version || '', diagnostics: placeholder || text });
   return `${repo}/issues/new?${q}`;
 }
 
-async function openIssue(title) {
+// pre, state: the dialog's details box and state line (a copy that fails shows the details there).
+async function openIssue(title, pre, state) {
   const info = await gather();
-  const url = issueUrl(info, title);
+  const text = await details(info, { full: false });
+  let url = issueUrl(info, title, text);
   if (!url) return false;
-  if (url.includes('paste+them+here')) await copy(detailsText(info, { full: false }));
+  if (url.length > MAX_LINK) {
+    const copied = await copy(text);
+    url = issueUrl(info, title, text, copied ? '(The app copied the details: paste them here.)' : '(Paste the details from the app here: Show details, then copy them.)');
+    if (!copied) {
+      pre.textContent = text;
+      pre.hidden = false;
+      state.textContent = 'The details are too long for the link and could not be copied: copy them from below and paste them into the form.';
+    }
+  }
   openExternal(url);
+  for (const p of problems) p.reported = true; // (on GitHub now: the button stops asking)
+  keep();
+  showBadge();
   return true;
 }
 
@@ -283,7 +317,7 @@ async function sendReport({ problem = null, crash = null } = {}) {
     user: { id: installId() },
   };
   if (crash) {
-    const type = crash.kind === 'crash' ? crash.what : crash.kind === 'page' ? 'PageCrash' : 'WebView2Crash';
+    const type = crash.kind === 'crash' ? crash.what : crash.kind === 'page' ? 'PageCrash' : crash.kind === 'exit' ? 'UnexpectedExit' : 'WebView2Crash';
     ev.exception = { values: [{ type, value: crashLine(crash), mechanism: { type: crash.kind === 'crash' ? 'minidump' : 'webview2', handled: false } }] };
     ev.tags.crash_kind = crash.kind;
   } else if (problem) {
@@ -311,7 +345,19 @@ function autoSend(p) {
 
 function showBadge() {
   const b = $('bugReportBtn');
-  if (b) b.classList.toggle('alert', problems.some((p) => !p.sent) || crashesWaiting.length > 0);
+  if (b) b.classList.toggle('alert', problems.some((p) => !p.sent && !p.reported) || crashesWaiting.some((c) => !reported().has(c.id)));
+}
+
+// Crashes reported on GitHub or copied (a build that sends nothing): kept until forgotten, but the
+// crash dialog does not ask about them again (settings.crashesReported).
+function reported() {
+  const r = ctx?.state.settings.crashesReported;
+  return new Set(Array.isArray(r) ? r : []);
+}
+function markReported(list) {
+  const ids = new Set([...reported(), ...list.map((c) => c.id)]);
+  setSetting('crashesReported', [...ids].filter((id) => crashesWaiting.some((c) => c.id === id))); // (only those still waiting)
+  showBadge();
 }
 
 function open(id) {
@@ -358,11 +404,11 @@ function renderReport() {
 function renderProblems() {
   const list = $('repProblemList');
   list.replaceChildren();
-  const rows = [
-    ...crashesWaiting.map((c) => ({ when: c.time, text: crashLine(c), state: 'waiting' })),
-    ...problems.map((p) => ({ when: p.time.toLocaleTimeString() + (p.before ? ' (earlier)' : ''), text: `${p.count > 1 ? p.count + '× ' : ''}${p.type}: ${clip(p.message, 160)}`, state: p.sent ? 'sent' : '' })),
-  ];
-  for (const r of rows.slice(-15)) {
+  const done = reported();
+  const cr = crashesWaiting.map((c) => ({ when: c.time, text: crashLine(c), state: done.has(c.id) ? 'reported' : 'waiting' }));
+  const pr = problems.map((p) => ({ when: p.time.toLocaleTimeString() + (p.before ? ' (earlier)' : ''), text: `${p.count > 1 ? p.count + '× ' : ''}${p.type}: ${clip(p.message, 160)}`, state: p.sent ? 'sent' : p.reported ? 'reported' : '' }));
+  const rows = [...cr, ...pr.slice(-Math.max(0, 15 - cr.length))]; // (the crashes always: they matter most)
+  for (const r of rows) {
     const li = document.createElement('li');
     li.innerHTML = '<span class="when"></span><span class="what"></span><span class="state"></span>';
     li.children[0].textContent = r.when;
@@ -381,15 +427,17 @@ function busyButton(btn, text, work) {
 }
 
 async function showDetails(pre) {
-  pre.textContent = detailsText(await gather());
+  pre.textContent = await details(await gather());
   pre.hidden = false;
 }
 
-// Copy details: what is shown, else gathered now.
+// Copy details: what is shown, else gathered now. true: copied.
 async function copyDetails(pre, state) {
-  const text = pre.hidden ? detailsText(await gather()) : pre.textContent;
-  state.textContent = (await copy(text)) ? 'Details copied.' : 'Could not copy: select the details and copy them from there.';
+  const text = pre.hidden ? await details(await gather()) : pre.textContent;
+  const ok = await copy(text);
+  state.textContent = ok ? 'Details copied.' : 'Could not copy: select the details and copy them from there.';
   if (pre.hidden) { pre.textContent = text; pre.hidden = false; } // (to copy by hand if need be)
+  return ok;
 }
 
 // The crash dialog: crashes since the last start (sent at once when automatic reports are on).
@@ -400,14 +448,18 @@ async function offerCrashes() {
     showBadge();
     return;
   }
-  const last = crashesWaiting[crashesWaiting.length - 1], n = crashesWaiting.length;
-  $('crashTitle').textContent = last.kind === 'crash' ? 'Grimcold crashed. Sorry about that.' : 'The view crashed and was reloaded. Sorry about that.';
+  const done = reported(), fresh = crashesWaiting.filter((c) => !done.has(c.id)); // (reported ones are not asked about again)
+  if (!fresh.length) return;
+  const last = fresh[fresh.length - 1], n = fresh.length;
+  $('crashTitle').textContent = last.kind === 'crash' ? 'Grimcold crashed. Sorry about that.' : last.kind === 'exit' ? 'Grimcold stopped unexpectedly last time. Sorry about that.' : 'The view crashed and was reloaded. Sorry about that.';
   const what = `${n > 1 ? `${n} crashes since the last start; the last one: ` : ''}${crashLine(last)}.`;
   $('crashWhat').textContent = what[0].toUpperCase() + what.slice(1);
   $('crashSend').hidden = !reports;
   $('crashAutoRow').hidden = !reports;
   $('crashAsk').hidden = !reports;
   $('crashNoSend').hidden = reports;
+  $('crashView').textContent = reports ? 'View what will be sent' : 'Show details'; // (a build that sends nothing says nothing about sending)
+  $('crashDrop').textContent = reports ? "Don't send" : 'Forget this crash';
   $('crashAuto').checked = false;
   $('crashDetails').hidden = true;
   $('crashGithub').disabled = !repoUrl();
@@ -419,15 +471,15 @@ async function offerCrashes() {
 // init: the host's init reply ({ crashes, reports, test }); c: { call, state, viewer, mapView }.
 export async function initSupport(init, c) {
   ctx = c;
-  reports = !!init.reports;
+  reports = !!init.reports; // (c.viewer is null on a PC without WebGL: Bug report and Donations still work)
   crashesWaiting = init.crashes || [];
   try {
     const r = await fetch('support.json', { cache: 'no-store' });
     if (r.ok) links = await r.json();
   } catch { /* no links: the pages say so */ }
-  window.__xo.support = { links: (l) => { links = { ...links, ...l }; }, problems: () => problems, crumbs: () => crumbs, gather, detailsText, sendReport, setReports: (on) => { reports = on; } }; // (tests)
+  (window.__xo ||= {}).support = { links: (l) => { links = { ...links, ...l }; }, problems: () => problems, crumbs: () => crumbs, gather, detailsText, sendReport, setReports: (on) => { reports = on; } }; // (tests)
   flushLog();
-  c.viewer.canvas.addEventListener('webglcontextlost', () => { lostCount++; lostAt = performance.now(); note('webgl', 'WebGLContextLost', `the WebGL context was lost (${where()})`, '', 'webglcontextlost'); });
+  c.viewer?.canvas.addEventListener('webglcontextlost', () => { lostCount++; lostAt = performance.now(); note('webgl', 'WebGLContextLost', `the WebGL context was lost (${where()})`, '', 'webglcontextlost'); });
 
   $('donationsBtn').addEventListener('click', () => { renderDonate(); open('donateDialog'); });
   // (the legal notice, NOTICE.md: the original's address, whatever support.json says)
@@ -444,7 +496,7 @@ export async function initSupport(init, c) {
   }, true);
 
   // Bug report
-  $('repGithub').addEventListener('click', (e) => busyButton(e.currentTarget, 'Opening…', () => openIssue('')));
+  $('repGithub').addEventListener('click', (e) => busyButton(e.currentTarget, 'Opening…', () => openIssue('', $('repDetails'), $('repState'))));
   $('repKnown').addEventListener('click', () => repoUrl() && openExternal(`${repoUrl()}/blob/main/KNOWN_ISSUES.md`));
   $('repView').addEventListener('click', (e) => busyButton(e.currentTarget, 'Gathering…', () => showDetails($('repDetails'))));
   $('repCopy').addEventListener('click', (e) => busyButton(e.currentTarget, 'Copying…', () => copyDetails($('repDetails'), $('repState'))));
@@ -457,7 +509,7 @@ export async function initSupport(init, c) {
       if (!todo.length) todo.push({});
       let ok = 0, err = '';
       for (const t of todo) { const r = await sendReport(t); if (r.ok) ok++; else err ||= r.error; }
-      st.textContent = ok ? `Sent ${ok === 1 ? 'the report' : ok + ' reports'}. Thank you!` : `Not sent: ${err}`;
+      st.textContent = !err ? `Sent ${ok === 1 ? 'the report' : ok + ' reports'}. Thank you!` : ok ? `Sent ${ok} of ${todo.length}; the rest not sent: ${err}` : `Not sent: ${err}`;
     } catch (x) { st.textContent = `Not sent: ${x.message}`; }
     renderProblems();
     showBadge();
@@ -479,8 +531,11 @@ export async function initSupport(init, c) {
     showBadge();
   });
   $('crashView').addEventListener('click', (e) => busyButton(e.currentTarget, 'Gathering…', () => showDetails($('crashDetails'))));
-  $('crashCopy').addEventListener('click', (e) => busyButton(e.currentTarget, 'Copying…', () => copyDetails($('crashDetails'), $('crashState'))));
-  $('crashGithub').addEventListener('click', (e) => busyButton(e.currentTarget, 'Opening…', () => openIssue('Crash: ' + crashLine(crashesWaiting[crashesWaiting.length - 1] || {}).slice(0, 80))));
+  // (copied or on GitHub: in a build that sends nothing, that is the crash reported)
+  $('crashCopy').addEventListener('click', (e) => busyButton(e.currentTarget, 'Copying…', async () => { if ((await copyDetails($('crashDetails'), $('crashState'))) && !reports) markReported(crashesWaiting); }));
+  $('crashGithub').addEventListener('click', (e) => busyButton(e.currentTarget, 'Opening…', async () => {
+    if ((await openIssue('Crash: ' + crashLine(crashesWaiting[crashesWaiting.length - 1] || {}).slice(0, 80), $('crashDetails'), $('crashState'))) && !reports) markReported(crashesWaiting);
+  }));
   $('crashLogs').addEventListener('click', () => ctx.call('openLogs').catch(() => {}));
 
   showBadge();

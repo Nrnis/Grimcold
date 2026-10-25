@@ -23,8 +23,16 @@ struct ICoreWebView2Environment;
 
 namespace rep {
 
-// Starts the log and the crash catcher (the data folder: logs\, crashes\; the app's version).
+// Starts the log and the crash catcher (the data folder: logs\, crashes\; the app's version). A
+// running.json the last run left (watchExit) becomes a crash record of kind "exit".
 void init(const std::filesystem::path &dataDir, const char *version);
+
+// From here until stopWatching(): a run that ends any other way (fail-fast crashes skip every handler:
+// heap corruption, a broken stack cookie; Task Manager; a power cut) leaves crashes\running.json, and
+// the next start records that it ended unexpectedly. stopWatching(): the app is ending normally (also
+// Windows ending the session). Tests leave it off: they end the app by killing it.
+void watchExit();
+void stopWatching();
 
 // One line in the log, from source ("host", "page" ...), with the user's folder and names taken out.
 void log(std::string_view source, std::string_view text);
@@ -43,7 +51,9 @@ ujson::Value logTail(int n);
 std::filesystem::path logDir();
 
 // Crashes not yet sent or dismissed, oldest first: { id, kind ("crash": the app; "page", "webview":
-// its page's processes), time, code, what, module, offset, version, dump (bytes, 0: none), reason }.
+// its page's processes; "exit": the last run ended without one), time, ms, code, what, module, offset,
+// stack (abort, terminate, invalid parameter, pure call: "module+0xoffset" frames from the handler on),
+// version, dump (bytes, 0: none), reason }.
 ujson::Value crashes();
 
 // Forgets a crash (sent, or the user said not to send it).
@@ -61,9 +71,14 @@ void testDsn(const std::string &dsn);
 
 // Tests: a crash record as the crash catcher writes it; a real crash of a kind: "native" (an access
 // violation), "stack" (a stack overflow), "cpp" (an uncaught C++ exception), "abort", "invalid" (an
-// invalid parameter to the C runtime), "purecall".
+// invalid parameter to the C runtime), "purecall", "two" (two threads at once), "fastfail" (an end no
+// handler sees), "inside" (the crash catcher itself faults). An uncaught C++ exception ("cpp") is
+// recorded as std::terminate, named by where it was thrown.
 void testCrashRecord();
 [[noreturn]] void testCrashNow(const std::string &kind);
+
+// Tests: text as a minidump's scrub leaves it, as bytes and as UTF-16: { text, wide }.
+ujson::Value testScrub(const std::string &text);
 
 // Sends one report: event, the page's part of it (exception or message, breadcrumbs, tags,
 // contexts, extra, user: a random install id); crashId: a pending crash whose minidump goes with it

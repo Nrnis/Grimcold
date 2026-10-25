@@ -68,7 +68,7 @@ namespace {
 constexpr wchar_t kAppTitle[] = L"Grimcold";
 constexpr wchar_t kWindowClass[] = L"GrimcoldWindow";
 constexpr wchar_t kUiHost[] = L"xo.app";
-constexpr char kVersion[] = "1.0.0";
+constexpr char kVersion[] = "1.0.1";
 constexpr UINT WM_APP_RUN = WM_APP + 1;
 
 // ---------------------------------------------------------------------------------------------
@@ -164,9 +164,11 @@ class Pool {
 };
 Pool *g_pool = nullptr;     // https://xo.data requests and the start-up scan
 Pool *g_taskPool = nullptr; // commands' work (exports, extracts, imports, re-reading the game), so a long export never holds up the viewer
+Pool *g_reportPool = nullptr; // bug reports going out (one at a time, apart from the task threads)
 std::atomic<bool> g_quitting{false}; // set when the window is gone: running exports stop early
 std::atomic<int> g_busyTasks{0};     // exports / extracts in flight (closing asks first)
 bool g_closing = false;              // the window is on its way out (UI thread): nothing starts again
+bool g_sessionEnding = false;        // Windows asked to end the session: WebView2's processes may go first
 HANDLE g_exitEvent = nullptr;        // set when wWinMain is done: the close watchdog stands down
 
 // %LOCALAPPDATA%, from the known-folder API (an unset or overlong variable can't break it).
@@ -2614,10 +2616,23 @@ void handleCommand(double id, const std::string &cmd, const ujson::Value &args) 
         ujson::Value ev = args["event"];
         const std::string crash = args["crash"].str();
         const bool withLog = args["log"].boolean(true);
-        runTask(id, false, [id, ev = std::move(ev), crash, withLog] {
-            ujson::Value r = rep::send(ev, crash, withLog);
+        // (on a thread of its own: a report server that does not answer must not hold up exports or a
+        // reload on the task threads)
+        g_reportPool->submit([id, ev = std::move(ev), crash, withLog] {
+            ujson::Value r;
+            try {
+                r = rep::send(ev, crash, withLog);
+            } catch (const std::exception &e) {
+                r = ujson::Value::object();
+                r.set("ok", false);
+                r.set("error", e.what());
+            }
             postToUi([id, r = std::move(r)]() mutable { reply(id, true, std::move(r)); });
         });
+        return;
+    }
+    if (cmd == "redact") { // the page's own text (its errors) without the user's folder and names, before it is shown or copied
+        reply(id, true, ujson::Value(rep::redact(args["text"].str())));
         return;
     }
     if (cmd == "dropCrash") {
@@ -2633,6 +2648,21 @@ void handleCommand(double id, const std::string &cmd, const ujson::Value &args) 
     if (cmd == "testReport" && g_opt.test()) { // tests: a local report server, a crash record, a real crash
         if (args.has("dsn"))
             rep::testDsn(args["dsn"].str());
+        if (args["watchExit"].boolean(false))
+            rep::watchExit();
+        if (args.has("scrub")) {
+            reply(id, true, rep::testScrub(args["scrub"].str()));
+            return;
+        }
+        if (args.has("endSession")) { // ("logoff", "closeapp": Windows ending the session, Restart Manager closing the app)
+            const LPARAM lp = args["endSession"].str() == "closeapp" ? ENDSESSION_CLOSEAPP : ENDSESSION_LOGOFF;
+            reply(id, true, ujson::Value(true));
+            postToUi([lp] {
+                if (SendMessageW(g_hwnd, WM_QUERYENDSESSION, 0, lp))
+                    SendMessageW(g_hwnd, WM_ENDSESSION, TRUE, lp);
+            });
+            return;
+        }
         const std::string crash = args["crash"].str();
         if (crash == "record")
             rep::testCrashRecord();
@@ -2653,7 +2683,7 @@ void handleCommand(double id, const std::string &cmd, const ujson::Value &args) 
     }
     if (cmd == "reveal") {
         const std::string p = args["path"].str();
-        if (p.find('"') == std::string::npos) // (a quote would end explorer's argument early)
+        if (!g_opt.test() && p.find('"') == std::string::npos) // (a quote would end explorer's argument early; tests never open windows)
             revealInExplorer(pathFromUtf8(p));
         reply(id, true, ujson::Value(true));
         return;
@@ -3583,7 +3613,7 @@ HRESULT onControllerCreated(HRESULT result, ICoreWebView2Controller *controller)
                                                  why = static_cast<size_t>(r) < std::size(names) ? names[r] : "reason " + std::to_string(static_cast<int>(r));
                                              }
                                          }
-                                         if (!g_closing) {
+                                         if (!g_closing && !g_sessionEnding) { // (logging off ends WebView2's processes too: no crash)
                                              if (kind == COREWEBVIEW2_PROCESS_FAILED_KIND_RENDER_PROCESS_EXITED)
                                                  rep::processFailed("page", exitCode, why);
                                              else if (kind == COREWEBVIEW2_PROCESS_FAILED_KIND_BROWSER_PROCESS_EXITED)
@@ -3601,11 +3631,11 @@ HRESULT onControllerCreated(HRESULT result, ICoreWebView2Controller *controller)
                                          crashes.push_back(now);
                                          while (!crashes.empty() && now - crashes.front() > 60000)
                                              crashes.pop_front();
-                                         if (g_webview && !g_closing && crashes.size() <= 3)
+                                         if (g_webview && !g_closing && !g_sessionEnding && crashes.size() <= 3)
                                              g_webview->Reload();
-                                         else if (!g_closing && !g_opt.test())
+                                         else if (!g_closing && !g_sessionEnding && !g_opt.test())
                                              postToUi([] { MessageBoxW(g_hwnd, L"The page keeps crashing, so it was not loaded again.\n\nPlease restart Grimcold.", kAppTitle, MB_OK | MB_ICONERROR); });
-                                     } else if (kind == COREWEBVIEW2_PROCESS_FAILED_KIND_BROWSER_PROCESS_EXITED) {
+                                     } else if (kind == COREWEBVIEW2_PROCESS_FAILED_KIND_BROWSER_PROCESS_EXITED && !g_sessionEnding) {
                                          postToUi(restartWebView);
                                      }
                                      return S_OK;
@@ -3803,6 +3833,24 @@ LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
         return DefWindowProcW(hwnd, msg, wp, lp);
+    case WM_QUERYENDSESSION:
+        g_sessionEnding = true;
+        return TRUE;
+    case WM_ENDSESSION: // Windows is ending the session (wp), or not after all: the process may be gone before WM_DESTROY
+        g_sessionEnding = wp != 0;
+        if (wp) {
+            rep::stopWatching();
+            if (lp & ENDSESSION_CLOSEAPP) { // (Restart Manager: closing is the app's own, as the user's close is)
+                if (!g_closing) {
+                    g_closing = true;
+                    flushThenClose();
+                }
+            } else { // (logging off, shutting down: the process ends once this returns; nothing half-written stays)
+                g_quitting = true;
+                xo::removePartialFiles();
+            }
+        }
+        return 0;
     case WM_DESTROY:
         if (g_controller)
             g_controller->Close();
@@ -3890,16 +3938,21 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int show) {
     }
     loadSettings();
     rep::init(g_dataDir, kVersion); // (the log, and crashes kept for Bug report from here on)
+    if (!g_opt.test())
+        rep::watchExit(); // (an end with no crash record and no close is noted at the next start)
     rep::log("host", std::string("Grimcold ") + kVersion + " started" + (g_opt.test() ? " (test)" : ""));
 
     std::string zerr;
     if (!xo::zstdLoad(&zerr)) {
         MessageBoxW(nullptr, (L"libzstd.dll is missing next to Grimcold.exe.\n\n" + toWide(zerr)).c_str(), kAppTitle, MB_OK | MB_ICONERROR);
+        rep::stopWatching(); // (an end the user was told about: no "stopped unexpectedly" next time)
         return 1;
     }
-    std::optional<Pool> pool, tasks; // (ended explicitly at the end, before the close watchdog stands down)
+    std::optional<Pool> pool, tasks, reportsPool; // (ended explicitly at the end, before the close watchdog stands down)
     pool.emplace(3); // (more serve a map no faster: 3 to 16 threads all opened sinto in 7.0-7.6 s, 2026-10-10)
     tasks.emplace(2);
+    reportsPool.emplace(1);
+    g_reportPool = &*reportsPool;
     g_pool = &*pool;
     g_taskPool = &*tasks;
 
@@ -3944,8 +3997,10 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int show) {
     g_hwnd = CreateWindowExW(g_opt.headless ? WS_EX_NOACTIVATE : 0, kWindowClass, kAppTitle, WS_OVERLAPPEDWINDOW, x, y, w, h, owner, nullptr, instance, nullptr);
     if (singleWnd && !g_opt.headless) // (a second start brings this window up; a hidden test window stays hidden)
         *singleWnd = g_hwnd;
-    if (!g_hwnd)
+    if (!g_hwnd) {
+        rep::stopWatching();
         return 1;
+    }
     const BOOL dark = TRUE;
     DwmSetWindowAttribute(g_hwnd, 20 /*DWMWA_USE_IMMERSIVE_DARK_MODE*/, &dark, sizeof(dark));
     const COLORREF edge = RGB(0x2b, 0x32, 0x3b); // (Windows 11: the window's thin edge in the game's slate)
@@ -3989,6 +4044,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int show) {
         if (WaitForSingleObject(g_exitEvent, 5000) == WAIT_OBJECT_0)
             return; // wWinMain finished normally: the process is ending anyway
         xo::removePartialFiles(); // whatever was still being written goes, not just its name
+        rep::stopWatching(); // (a normal quit, only a slow one)
         TerminateProcess(GetCurrentProcess(), 0);
     }).detach();
     g_env.Reset();
@@ -3997,6 +4053,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, LPWSTR, int show) {
     g_taskPool = nullptr;
     tasks.reset(); // waits for running work (which stops at its next step: g_quitting)
     pool.reset();
+    g_reportPool = nullptr;
+    reportsPool.reset(); // (a report still going out: the watchdog above ends it after 5 s)
+    rep::stopWatching();
     SetEvent(g_exitEvent);
     CoUninitialize();
     return 0;

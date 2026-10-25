@@ -47,7 +47,7 @@ rem source. A build without it sends none (Bug report still copies the details a
 if not exist build\gen mkdir build\gen
 set "XO_DSN=%SENTRY_DSN%"
 > build\gen\buildinfo.h echo #define XO_SENTRY_DSN "%XO_DSN%"
-cl %CFLAGS% /Ibuild\gen src\app\main.cpp src\app\report.cpp %CORE% build\obj\app.res /Fobuild\app\ /FeGrimcold.exe /link /SUBSYSTEM:WINDOWS /MANIFEST:NO third_party\webview2\x64\WebView2LoaderStatic.lib %CORELIBS% user32.lib gdi32.lib shell32.lib shlwapi.lib dwmapi.lib advapi32.lib comdlg32.lib version.lib dbghelp.lib winhttp.lib dxgi.lib
+cl %CFLAGS% /Ibuild\gen src\app\main.cpp src\app\report.cpp %CORE% build\obj\app.res /Fobuild\app\ /FeGrimcold.exe /link /MAP:build\Grimcold.map /SUBSYSTEM:WINDOWS /MANIFEST:NO third_party\webview2\x64\WebView2LoaderStatic.lib %CORELIBS% user32.lib gdi32.lib shell32.lib shlwapi.lib dwmapi.lib advapi32.lib comdlg32.lib version.lib dbghelp.lib winhttp.lib dxgi.lib
 if errorlevel 1 exit /b 1
 copy /y third_party\zstd\libzstd.dll . >nul
 echo [build] OK: %CD%\Grimcold.exe

@@ -7,13 +7,14 @@ vehicles or whole maps for Blender, Cinema 4D and other 3D tools.
 
 > Unofficial fan tool, not made, endorsed or supported by Gaijin Entertainment or Targem Games. It
 > contains no game files: it reads them from your own Crossout installation, never changes them, and
-> never touches the running game.
+> never touches the running game. Crossout and all of its content belong to Gaijin Entertainment and
+> Targem Games ([more below](#the-games-content)).
 
 ![The 3D Viewer](screenshots/1-3d-viewer.jpg)
 
 ## Download
 
-1. Download `Grimcold-1.0.0-win64.zip` from the [latest release](https://github.com/Nrnis/Grimcold/releases/latest).
+1. Download `Grimcold-1.0.1-win64.zip` from the [latest release](https://github.com/Nrnis/Grimcold/releases/latest).
 2. Unzip it anywhere, keep its files together, and run `Grimcold.exe`.
 3. It finds Crossout by itself (Crossout Launcher or Steam). If it does not, pick the folder that
    holds the game's `data` folder.
@@ -77,4 +78,10 @@ licences: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Thanks to crosscalc.
 stats and to [CrossoutMarket](https://github.com/Zicore/CrossoutMarket) for the old item data used to
 name parts.
 
-Crossout and all of its names and assets belong to their owners.
+## The game's content
+
+Crossout, its name and logo, and all of its game content (models, textures, sounds, maps, effects,
+names and texts) belong to Gaijin Entertainment and Targem Games and their licensors. Grimcold's
+licence covers only Grimcold's own code and gives no rights to any of it, files exported with
+Grimcold included: their use is subject to the rights holders' terms, and sharing, selling or reusing
+them without their permission can infringe their copyright.

@@ -3,7 +3,11 @@
 // in them), copying them, GitHub's form filled in, the page's errors noted and logged, reports sent
 // to a local stand-in for Sentry (the envelope as Sentry reads it: event, log, minidump; nothing
 // personal in it), automatic reports, the crash dialog after a crash record and after a real crash
-// of the host (its minidump written and sent), Don't send.
+// of the host (its minidump written and sent), Don't send; the page's own text with the user's folder
+// and names taken out before it is shown, copied or put in the link; the app's keys waiting behind the
+// dialog; details too long for the link with the clipboard refusing; a list row's text kept out of the
+// steps; in a build that sends nothing, the crash dialog's words, its close button, a crash reported
+// on GitHub not asked about again, crashes kept at the top of the list.
 //   node tools/e2e_support.mjs
 import fs from 'node:fs';
 import os from 'node:os';
@@ -47,7 +51,7 @@ function envelope(buf) {
 }
 const waitGot = async (n, ms = 20000) => { const t0 = Date.now(); while (got.length < n && Date.now() - t0 < ms) await sleep(100); return got.length >= n; };
 
-const user = os.userInfo().username, pc = process.env.COMPUTERNAME || '';
+const user = os.userInfo().username, pc = process.env.COMPUTERNAME || '', profile = os.homedir();
 const personal = (text) => [user, pc].filter((s) => s && s.length >= 3).some((s) => new RegExp(`(^|[^A-Za-z0-9_])${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Za-z0-9_]|$)`, 'i').test(text));
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'xo-e2e-support-'));
 let app = await launch({ dataDir });
@@ -100,6 +104,37 @@ try {
     `GitHub's form filled in: version ${issue.searchParams.get('version')}, the details (${issue.href.length} characters)`);
   const form = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '.github', 'ISSUE_TEMPLATE', 'bug_report.yml'), 'utf8');
   ok(/id: version/.test(form) && /id: diagnostics/.test(form), 'the form has the fields the app fills in');
+
+  // ---- the page's own text, as it may leave the app: names taken out ----
+  const named = `support test boom path ${profile}\\Documents\\x.glb by ${user} on ${pc}`;
+  await js(`setTimeout(() => { throw new Error(${JSON.stringify(named)}); }, 0)`);
+  await waitFor(`window.__xo.support.problems().some((p) => /support test boom path/.test(p.message))`, 10000);
+  await js(`document.getElementById('repView').click()`);
+  await waitFor(`/support test boom path/.test(document.getElementById('repDetails').textContent)`, 20000);
+  const shown = await js(`document.getElementById('repDetails').textContent`);
+  await js(`window.__xoOpened = ''; document.getElementById('repGithub').click()`);
+  await waitFor(`/issues\\/new/.test(window.__xoOpened || '')`, 20000);
+  const sent0 = new URL(await js('window.__xoOpened')).searchParams.get('diagnostics') || '';
+  ok(!personal(shown) && !personal(sent0) && /Users\\<user>\\Documents/.test(shown) && /by <user> on <pc>/.test(sent0), 'an error naming the user\'s folder and names: shown, copied and put in the link without them');
+  // the app's keys wait behind the open dialog (they changed the part the report described)
+  const keys0 = await js(`({ path: window.__xo.state.info?.path || '', wire: document.getElementById('optWire').checked })`);
+  await app.key('ArrowDown');
+  await app.key('w');
+  await sleep(300);
+  const keys1 = await js(`({ path: window.__xo.state.info?.path || '', wire: document.getElementById('optWire').checked })`);
+  ok(keys1.path === keys0.path && keys1.wire === keys0.wire, 'the app\'s keys wait while Bug report is open (no part change, no wireframe)');
+  // a list row's text (it can be a name the user gave a part) stays out of the steps
+  await js(`(() => { const d = document.createElement('div'); d.className = 'row-item'; d.textContent = 'secret name 4711'; document.body.appendChild(d); d.click(); d.remove(); })()`);
+  ok(!/secret name 4711/.test(JSON.stringify(await js('window.__xo.support.crumbs()'))), 'a list row\'s text is not kept as a step');
+  // details too long for the link, the clipboard refusing: said so, the details shown to copy by hand
+  for (let i = 0; i < 14; i++) await js(`setTimeout(() => { throw new Error('support test boom long ${'\u00e9'.repeat(5)} ' + ${i} + ' ' + 'x'.repeat(240)); }, 0)`);
+  await waitFor(`window.__xo.support.problems().filter((p) => /support test boom long/.test(p.message)).length === 14`, 10000);
+  await js(`(() => { window.__clip = navigator.clipboard.writeText; navigator.clipboard.writeText = () => Promise.reject(new Error('no')); window.__exec = document.execCommand; document.execCommand = () => false; document.getElementById('repDetails').hidden = true; window.__xoOpened = ''; document.getElementById('repState').textContent = ''; document.getElementById('repGithub').click(); })()`);
+  await waitFor(`/issues\\/new/.test(window.__xoOpened || '')`, 20000);
+  const longUrl = await js('window.__xoOpened'), longState = await js(`document.getElementById('repState').textContent`);
+  ok(longUrl.length <= 2000 && /Paste the details/.test(new URL(longUrl).searchParams.get('diagnostics')) && /could not be copied/.test(longState) && (await js(`!document.getElementById('repDetails').hidden`)),
+    `details too long for the link, the clipboard refusing: the form asks to paste, the dialog says so and shows them (${longUrl.length} characters)`);
+  await js(`(() => { navigator.clipboard.writeText = window.__clip; document.execCommand = window.__exec; const ps = window.__xo.support.problems(); ps.splice(0, ps.length); document.querySelector('#reportDialog [data-close]').click(); })()`); // (the next checks start without these)
 
   // ---- the page's errors ----
   await js(`setTimeout(() => { throw new Error('support test boom'); }, 0)`);
@@ -174,8 +209,47 @@ try {
   ok(md && md.payload.length === dump.length && md.payload.subarray(0, 4).toString() === 'MDMP', `with its minidump (${md ? (md.payload.length / 1024).toFixed(0) : 0} KB)`);
   ok(await js(`window.__xo.call('diagnostics', {}).then((d) => d.crashes.length === 0)`), 'and is forgotten once sent');
 
+  // ---- a build that sends nothing: the crash dialog ----
+  await js(`window.__xo.call('testReport', { dsn: '' })`);
+  await js(`window.__xo.call('testReport', { crash: 'record' })`);
+  const reload = async () => { await js('location.reload()').catch(() => {}); await sleep(1500); await waitFor('window.__xoReady === true && !!window.__xo.support', 120000); };
+  await reload();
+  await waitFor(`!document.getElementById('crashDialog').hidden`, 20000);
+  const c3 = await js(`(() => ({ view: document.getElementById('crashView').textContent, drop: document.getElementById('crashDrop').textContent, send: !document.getElementById('crashSend').hidden, x: !!document.querySelector('#crashDialog .modal-x') }))()`);
+  ok(c3.view === 'Show details' && c3.drop === 'Forget this crash' && !c3.send && c3.x, `nothing to send: the dialog says "${c3.view}" / "${c3.drop}", no Send, and has a close button`);
+  await js(`document.querySelector('#crashDialog .modal-x').click()`);
+  ok(await js(`document.getElementById('crashDialog').hidden && window.__xo.call('diagnostics', {}).then((d) => d.crashes.length === 1)`), 'closing it keeps the crash (for Bug report)');
+  await reload();
+  await waitFor(`!document.getElementById('crashDialog').hidden`, 20000);
+  await js(`window.__xoOpened = ''; document.getElementById('crashGithub').click()`);
+  await waitFor(`/issues\\/new/.test(window.__xoOpened || '')`, 20000);
+  ok(/^Crash: /.test(new URL(await js('window.__xoOpened')).searchParams.get('title')), 'Open GitHub issue: the form titled after the crash');
+  await sleep(500);
+  await reload();
+  await sleep(1500);
+  ok(await js(`document.getElementById('crashDialog').hidden`), 'reported on GitHub, it is not asked about again at the next start');
+  for (let i = 0; i < 16; i++) await js(`setTimeout(() => { throw new Error('support test boom many ' + ${i}); }, 0)`);
+  await waitFor(`window.__xo.support.problems().filter((p) => /support test boom many/.test(p.message)).length === 16`, 10000);
+  await js(`document.getElementById('bugReportBtn').click()`);
+  const rows = await js(`[...document.querySelectorAll('#repProblemList li')].map((li) => li.textContent)`);
+  ok(rows.length === 15 && /EXCEPTION_ACCESS_VIOLATION/.test(rows[0]) && /reported/.test(rows[0]), `with 16 problems the crash stays at the top of the list, marked reported (${rows.length} rows)`);
+  await js(`window.__xo.call('diagnostics', {}).then((d) => Promise.all(d.crashes.map((c) => window.__xo.call('dropCrash', { id: c.id }))))`);
+
   const left2 = app.errors.filter((e) => !/support test (boom|auto)/.test(e));
   ok(left2.length === 0, `no other page errors (${left2.slice(0, 2).join(' | ')})`);
+
+  // ---- no WebGL 2 on the PC: Bug report and Donations still open ----
+  const { identifier } = await app.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `(() => { const get = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (type, ...a) { return /webgl/i.test(type) ? null : get.call(this, type, ...a); }; })()`,
+  });
+  await js('location.reload()').catch(() => {});
+  await sleep(1500);
+  await waitFor('!!(window.__xo && window.__xo.support)', 60000);
+  await js(`document.getElementById('bugReportBtn').click(); document.getElementById('repView').click()`);
+  await waitFor(`/WebGL: not available/.test(document.getElementById('repDetails').textContent)`, 20000);
+  const nogl = await js(`(() => { const r = !document.getElementById('reportDialog').hidden; document.getElementById('reportDialog').hidden = true; document.getElementById('donationsBtn').click(); return { report: r, donate: !document.getElementById('donateDialog').hidden, status: document.getElementById('status')?.textContent || '' }; })()`);
+  ok(nogl.report && nogl.donate, `no WebGL 2: Bug report (its details say "WebGL: not available") and Donations still open (status: "${nogl.status.slice(0, 60)}")`);
+  await app.send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
 } catch (e) {
   console.log('FAIL', e.stack || e.message);
   failures++;

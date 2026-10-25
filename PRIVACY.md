@@ -17,12 +17,15 @@ a build. A report contains:
 - the app's version, Windows version, CPU, memory, graphics cards and their drivers, WebView2's
   version and the display's size and scale
 - where in the app you were (the view, the map or part open) and the view's on/off and number settings
+- the last 40 steps taken in the app: which button or tab was clicked, by its label, or that a list
+  row was (never the text you typed, and never what a list row says)
 - the errors seen this session, and the last lines of the app's log
 - after a crash of the app itself, a minidump: the state of the program's threads when it crashed
+  (only what a stack trace needs: no other memory, and no folders its parts were loaded from)
 - a random install ID, so that crashes can be counted per installation
 
 The app takes your Windows user folder, user name and computer name out of everything it sends or
-logs. A report contains no files, models or game data, no name, no email, and no text you typed.
+logs, the minidump included. A report contains no files, models or game data, no name, no email, and no text you typed.
 
 ## Where it goes
 
@@ -36,9 +39,10 @@ there is public, under your own GitHub account, and covered by GitHub's own term
 
 ## The app's own files
 
-The log (`logs\`, 5 files of 1 MB at most) and crashes waiting to be sent (`crashes\`) are in the
-app's data folder, `%LOCALAPPDATA%\Grimcold`. **Bug report → Open log folder** shows them;
-deleting them is always fine.
+The log (`logs\`, 5 files of 1 MB at most) and the crashes (`crashes\`) are in the app's data folder,
+`%LOCALAPPDATA%\Grimcold`. While the app runs, `crashes\running.json` marks that it is open, so that
+an end without a crash report is still noticed at the next start. **Bug report → Open log folder**
+opens `logs\`; `crashes\` is next to it. Deleting either is always fine.
 
 ## Donations
 

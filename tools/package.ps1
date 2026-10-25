@@ -13,7 +13,7 @@ if (Test-Path $out) { Remove-Item -Recurse -Force $out }
 New-Item -ItemType Directory -Force $out | Out-Null
 Copy-Item "$root\Grimcold.exe", "$root\libzstd.dll" $out
 Copy-Item -Recurse "$root\ui" (Join-Path $out 'ui')
-foreach ($f in 'README.md', 'MANUAL.md', 'LICENSE', 'NOTICE.md', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md', 'KNOWN_ISSUES.md') { Copy-Item "$root\$f" $out }
+foreach ($f in 'README.md', 'MANUAL.md', 'LICENSE', 'NOTICE.md', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md', 'KNOWN_ISSUES.md', 'SECURITY.md', 'CODE_OF_CONDUCT.md') { Copy-Item "$root\$f" $out }
 Copy-Item "$root\third_party\webview2\NOTICE.txt" (Join-Path $out 'WebView2-NOTICE.txt')
 $zip = Join-Path $root "dist\$name.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }

@@ -247,6 +247,17 @@ function getInfo(path, skin = '') {
 }
 
 // ---- viewer + builder -------------------------------------------------------------------------
+// No WebGL 2 in WebView2 on this PC (a blocked driver, a virtual machine, Remote Desktop): nothing
+// below can start, but Bug report and Donations still do, so it can be reported.
+if (!(() => { try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; } })()) {
+  status('WebGL 2 is not available in WebView2 on this PC: Grimcold cannot draw. Bug report has the details.', true, true);
+  call('init').then((init) => {
+    state.settings = init.settings || {};
+    state.test = init.test;
+    return initSupport(init, { call, state, viewer: null, mapView: null });
+  }).catch((e) => console.warn('Bug report could not start:', e));
+  throw new Error('WebGL 2 is not available in WebView2 on this PC');
+}
 const viewer = new Viewer($('view'), {
   onHover: (h) => {
     const tip = $('hoverTip');
@@ -3168,6 +3179,7 @@ function releaseFocus() {
 
 document.addEventListener('keyup', (e) => { garageCam.up(e); drive.key(e, false); mapView.fly.key(e, false); if (e.key.toLowerCase() === 'v') gunfire.stop(); });
 document.addEventListener('keydown', (e) => {
+  if (document.querySelector('.support-modal:not([hidden])')) return; // (Bug report, Donations, a crash's dialog: the app's keys wait; support.js closes them on Escape)
   const k = e.key.toLowerCase();
   if (e.ctrlKey && k === 'f') { e.preventDefault(); const s = state.view === 'map' ? $('mapSearch') : $('search'); s.focus(); s.select(); return; }
   if (state.view === 'build' && e.ctrlKey && k === 's') { e.preventDefault(); saveBuild({ as: e.shiftKey }); return; } // also from a text box
