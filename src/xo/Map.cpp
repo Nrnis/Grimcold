@@ -2927,7 +2927,7 @@ inline float comp(const V3 &v, int k) { return k == 0 ? v.x : k == 1 ? v.y : v.z
 } // namespace
 
 bool buildDecalMeshes(const GameData &gd, const MapScene &scene, const std::map<uint32_t, DecalPreset> &presets, int terrainStep,
-                      std::vector<DecalMesh> &out, std::vector<std::string> &warnings) {
+                      std::vector<DecalMesh> &out, std::vector<std::string> &warnings, size_t maxTriangles) {
     out.clear();
     std::unordered_map<std::string, DecalTarget> targets;
     std::unordered_map<std::string, std::pair<uint32_t, uint32_t>> texSize; // texture base -> width, height
@@ -3148,9 +3148,61 @@ bool buildDecalMeshes(const GameData &gd, const MapScene &scene, const std::map<
             }
         }
     });
+    // Within maxTriangles (kDecalTriangles: what a view takes): zombie_escape_3's volume boxes
+    // (volume_quad_z, up to 3.8 km deep, painting every face inside) came to 13.9 million triangles on
+    // its buildings, 1.56 GB, more than WebView2 takes in one response (the app ended). Over it whole
+    // kinds go in turn (decalRank): every volume box off all the objects inside it (not some of them,
+    // by size), then off the ground, then the other decals off objects; were the ordinary decals on the
+    // ground still too many, their biggest pieces would go.
+    std::array<size_t, 4> rankTris{};
+    size_t total = 0;
+    for (size_t di = 0; di < made.size(); ++di)
+        for (const DecalMesh &m : made[di]) {
+            rankTris[decalRank(preset[di], m)] += m.indices.size() / 3;
+            total += m.indices.size() / 3;
+        }
+    if (total > maxTriangles) {
+        static const char *const kind[] = {"the volume decals on the objects inside them", "the volume decals on the ground", "the other decals on objects", "the biggest decals on the ground"};
+        const size_t before = total;
+        std::string what;
+        auto said = [&](int r, size_t decals) { what += (what.empty() ? "" : ", ") + std::string(kind[r]) + " (" + std::to_string(decals) + ")"; };
+        for (int r = 0; r < 3 && total > maxTriangles; ++r) {
+            std::set<size_t> decals;
+            for (size_t di = 0; di < made.size(); ++di)
+                for (DecalMesh &m : made[di])
+                    if (decalRank(preset[di], m) == r && !m.indices.empty()) {
+                        m.indices.clear(); // (left out below)
+                        decals.insert(di);
+                    }
+            total -= rankTris[r];
+            said(r, decals.size());
+        }
+        if (total > maxTriangles) {
+            std::vector<DecalMesh *> ground;
+            for (size_t di = 0; di < made.size(); ++di)
+                for (DecalMesh &m : made[di])
+                    if (!m.indices.empty())
+                        ground.push_back(&m);
+            std::sort(ground.begin(), ground.end(), [](const DecalMesh *a, const DecalMesh *b) { return a->indices.size() > b->indices.size(); });
+            std::set<int> decals;
+            for (DecalMesh *m : ground) {
+                if (total <= maxTriangles)
+                    break;
+                total -= m->indices.size() / 3;
+                decals.insert(m->decal);
+                m->indices.clear();
+            }
+            said(3, decals.size());
+        }
+        char b[384];
+        std::snprintf(b, sizeof b, "%.1f of the decals' %.1f million triangles left out, more than the view takes (%.1f million): %s", (before - total) / 1e6, before / 1e6,
+                      maxTriangles / 1e6, what.c_str());
+        warnings.push_back(b);
+    }
     for (auto &meshes : made)
         for (DecalMesh &m : meshes)
-            out.push_back(std::move(m));
+            if (!m.indices.empty())
+                out.push_back(std::move(m));
     for (uint32_t id : missing)
         warnings.push_back("decal preset " + std::to_string(id) + " not found");
     return true;

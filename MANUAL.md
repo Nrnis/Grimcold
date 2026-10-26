@@ -734,7 +734,10 @@ detail at the sizes on screen the game's own models ask for.
   glowing things (the light newyear_foray's garlands paint on its roofs lies on both slopes and fades
   down from the ridge, as in the game); overlapping decals are laid in the map's order. A decal's
   share on an object goes with the object (hidden, or its kind switched off), the ones on the ground
-  go with the terrain; each decal stays one mesh to draw.
+  go with the terrain; each decal stays one mesh to draw. A map's decals make 3.5 million triangles
+  at most: only zombie_escape_3 has more (13.9 million, nearly all its big volume boxes painting
+  every face of the buildings inside them), and there those boxes lie on the ground alone, not on the
+  objects inside them, which the panel says.
 
 The panel on the right:
 - the map's size, objects and models, how much is drawn now, its grass, decals, lights (with their

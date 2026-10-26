@@ -7,6 +7,9 @@ Already known, no need to report them again (a new detail about one is welcome).
 - About 250 objects whose model could not be found are left out (fuji's light poles and bridge lamps,
   newyear_foray's big poles, some of castle's brick walls).
 - Spotlights light a round cone, without the game's light patterns.
+- zombie_escape_3: its biggest volume decals (the tinted boxes over the town) lie on the ground but
+  not on the buildings inside them; drawn whole they come to 13.9 million triangles, more than the
+  view can take.
 - The water's own ripples, splashes and wakes (hits on water, propellers, a cannon's blast over the
   water) are not shown.
 - tower: a dark band along the horizon; the high-rises' broken top floors are lit by the lamps inside.

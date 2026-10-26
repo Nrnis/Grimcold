@@ -421,7 +421,18 @@ struct DecalMesh {
     std::vector<uint32_t> indices;
 };
 // terrainStep: the height samples the terrain is drawn with (0 = auto, as /mapterrain and the export).
+// At most maxTriangles in all (kDecalTriangles: what a view takes; zombie_escape_3's volume decals made
+// 13.9 million, every other map stays under it): over it whole kinds of pieces are left out in turn
+// (decalRank), with a warning.
+constexpr size_t kDecalTriangles = 3500000;
 bool buildDecalMeshes(const GameData &gd, const MapScene &scene, const std::map<uint32_t, DecalPreset> &presets, int terrainStep,
-                      std::vector<DecalMesh> &out, std::vector<std::string> &warnings);
+                      std::vector<DecalMesh> &out, std::vector<std::string> &warnings, size_t maxTriangles = kDecalTriangles);
+// The order a decal's pieces are left out in over the limit: 0 a volume preset's (UseFadeByNormal
+// false: it paints every face in its box) on an object, 1 a volume preset's on the ground, 2 any
+// other on an object, 3 any other on the ground.
+inline int decalRank(const DecalPreset *preset, const DecalMesh &m) {
+    const bool volume = preset && !preset->fadeByNormal, onObject = m.object >= 0;
+    return volume && onObject ? 0 : volume ? 1 : onObject ? 2 : 3;
+}
 
 } // namespace xo

@@ -2321,8 +2321,25 @@ int wmain(int argc, wchar_t **argv) {
         std::vector<DecalMesh> meshes;
         std::vector<std::string> warnings;
         const auto t1 = std::chrono::steady_clock::now();
-        buildDecalMeshes(gd, s, presets, 0, meshes, warnings);
+        const bool uncapped = std::find(args.begin(), args.end(), "--uncapped") != args.end();
+        buildDecalMeshes(gd, s, presets, 0, meshes, warnings, uncapped ? SIZE_MAX : kDecalTriangles);
         const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t1).count();
+        // (--ranks: the triangles of each kind decalRank leaves out in turn, as built and without the limit)
+        if (std::find(args.begin(), args.end(), "--ranks") != args.end()) {
+            auto ranks = [&](const std::vector<DecalMesh> &ms2) {
+                std::array<size_t, 4> t{};
+                for (const auto &m : ms2) {
+                    auto p = presets.find(s.decals[m.decal].preset);
+                    t[decalRank(p == presets.end() ? nullptr : &p->second, m)] += m.indices.size() / 3;
+                }
+                return t;
+            };
+            std::vector<DecalMesh> all;
+            std::vector<std::string> w2;
+            buildDecalMeshes(gd, s, presets, 0, all, w2, SIZE_MAX);
+            const auto a = ranks(all), c = ranks(meshes);
+            std::printf("ranks uncapped %zu %zu %zu %zu capped %zu %zu %zu %zu\n", a[0], a[1], a[2], a[3], c[0], c[1], c[2], c[3]);
+        }
         size_t tris = 0, onStatic = 0, onLand = 0, pieces = 0;
         for (const auto &m : meshes) {
             tris += m.indices.size() / 3;
@@ -2334,6 +2351,39 @@ int wmain(int argc, wchar_t **argv) {
         }
         std::printf("%zu decals (%zu on the ground, %zu on objects), %zu presets known; %zu meshes (%zu of them on an object), %zu triangles in %.0f ms\n", s.decals.size(),
                     onLand, onStatic, presets.size(), meshes.size(), pieces, tris, ms);
+        // (--top: the vertices and bytes /mapdecals sends, and the meshes and presets with the most triangles)
+        if (std::find(args.begin(), args.end(), "--top") != args.end()) {
+            size_t verts = 0;
+            for (const auto &m : meshes)
+                verts += m.position.size() / 3;
+            std::printf("%zu vertices: %.0f MB as /mapdecals sends them (36 bytes a vertex, 12 a triangle)\n", verts, (verts * 36.0 + tris * 12.0) / 1048576);
+            std::vector<size_t> order(meshes.size());
+            for (size_t i = 0; i < order.size(); ++i)
+                order[i] = i;
+            std::sort(order.begin(), order.end(), [&](size_t a, size_t b) { return meshes[a].indices.size() > meshes[b].indices.size(); });
+            for (size_t k = 0; k < std::min<size_t>(15, order.size()); ++k) {
+                const auto &m = meshes[order[k]];
+                const auto &d = s.decals[m.decal];
+                std::printf("  %8zu tris  decal %d '%s' preset %u scale %.1f %.1f %.1f on %s\n", m.indices.size() / 3, m.decal, d.name.c_str(), d.preset, d.scale[0], d.scale[1], d.scale[2],
+                            m.object < 0 ? "the terrain" : s.objects[m.object].model.c_str());
+            }
+            std::map<uint32_t, std::pair<size_t, size_t>> byPreset; // preset -> decals' meshes, triangles
+            for (const auto &m : meshes) {
+                auto &e = byPreset[s.decals[m.decal].preset];
+                e.first++;
+                e.second += m.indices.size() / 3;
+            }
+            std::vector<std::pair<uint32_t, std::pair<size_t, size_t>>> bp(byPreset.begin(), byPreset.end());
+            std::sort(bp.begin(), bp.end(), [](const auto &a, const auto &b) { return a.second.second > b.second.second; });
+            for (size_t k = 0; k < std::min<size_t>(10, bp.size()); ++k) {
+                auto p = presets.find(bp[k].first);
+                std::printf("  preset %u (%s): %zu meshes, %zu tris\n", bp[k].first, p == presets.end() ? "?" : (p->second.albedo.empty() ? p->second.normal : p->second.albedo).c_str(), bp[k].second.first, bp[k].second.second);
+            }
+            size_t land = 0, onObj = 0;
+            for (const auto &m : meshes)
+                (m.object < 0 ? land : onObj) += m.indices.size() / 3;
+            std::printf("  on the terrain %zu tris, on objects %zu tris\n", land, onObj);
+        }
         for (const auto &w : warnings)
             std::printf("warning: %s\n", w.c_str());
         return 0;

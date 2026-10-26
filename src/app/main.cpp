@@ -68,7 +68,7 @@ namespace {
 constexpr wchar_t kAppTitle[] = L"Grimcold";
 constexpr wchar_t kWindowClass[] = L"GrimcoldWindow";
 constexpr wchar_t kUiHost[] = L"xo.app";
-constexpr char kVersion[] = "1.0.1";
+constexpr char kVersion[] = "1.0.2";
 constexpr UINT WM_APP_RUN = WM_APP + 1;
 
 // ---------------------------------------------------------------------------------------------
@@ -2207,6 +2207,22 @@ struct Pending {
 std::map<uint64_t, Pending> g_pending;
 uint64_t g_nextToken = 1;
 
+// The most one response hands WebView2: a bigger one ends the app inside WebView2 (its out-of-memory
+// exception, 0xE0000008: zombie_escape_3's 1.56 GB of decals did; secret_height's 365 MB did not), so it
+// is refused and the page goes on without that part. (testReport { maxResponse } lowers it for tests)
+std::atomic<size_t> g_maxResponse{768u << 20};
+std::wstring g_testRefuseRoute; // (tests: the lowered limit for this route alone, e.g. L"/mapdecals"; UI thread)
+
+std::wstring requestUri(const Pending &p) {
+    ComPtr<ICoreWebView2WebResourceRequest> req;
+    LPWSTR u = nullptr;
+    std::wstring s;
+    if (SUCCEEDED(p.args->get_Request(&req)) && req && SUCCEEDED(req->get_Uri(&u)) && u)
+        s = u;
+    CoTaskMemFree(u);
+    return s;
+}
+
 void completeRequest(uint64_t token, Response r) {
     auto it = g_pending.find(token);
     if (it == g_pending.end())
@@ -2215,6 +2231,12 @@ void completeRequest(uint64_t token, Response r) {
     g_pending.erase(it);
     if (!g_env)
         return;
+    if (r.body.size() > g_maxResponse && (g_testRefuseRoute.empty() || requestUri(p).find(g_testRefuseRoute) != std::wstring::npos)) {
+        char b[160];
+        std::snprintf(b, sizeof b, "too big for the view (%.0f MB)", r.body.size() / 1048576.0);
+        rep::log("host", std::string("a response was refused: ") + b);
+        r = errorResponse(507, b);
+    }
     ComPtr<IStream> stream;
     stream.Attach(SHCreateMemStream(r.body.empty() ? nullptr : r.body.data(), static_cast<UINT>(r.body.size())));
     std::wstring headers = L"Content-Type: " + toWide(r.contentType) + L"\r\nCache-Control: no-store\r\nAccess-Control-Allow-Origin: *";
@@ -2653,6 +2675,10 @@ void handleCommand(double id, const std::string &cmd, const ujson::Value &args) 
         if (args.has("scrub")) {
             reply(id, true, rep::testScrub(args["scrub"].str()));
             return;
+        }
+        if (args.has("maxResponse")) { // (bytes, for one route ("/mapdecals") or all; 0: back to the real limit)
+            g_maxResponse = args["maxResponse"].num(0) > 0 ? static_cast<size_t>(args["maxResponse"].num(0)) : (768u << 20);
+            g_testRefuseRoute = args["maxResponse"].num(0) > 0 ? toWide(args["route"].str()) : std::wstring();
         }
         if (args.has("endSession")) { // ("logoff", "closeapp": Windows ending the session, Restart Manager closing the app)
             const LPARAM lp = args["endSession"].str() == "closeapp" ? ENDSESSION_CLOSEAPP : ENDSESSION_LOGOFF;
