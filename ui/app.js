@@ -13,6 +13,7 @@ import { MapEffects, weatherName } from './mapfx.js';
 import { Drive, shotBreaks } from './drive.js';
 import { Recorder, dataUrlOf } from './recorder.js';
 import { weaponAim, ARC_SIZE } from './arcs.js';
+import { stickerPacks, packLabel, thumbUrl as stickerThumb, SIZE as STICKER_SIZE } from './stickers.js';
 import { PartStats, GarageCamera, hydrateIcons, resetIcons, vehicleStats, energyBarHtml, vehicleStatsHtml, partCardHtml, controlsHtml, keysHtml, MAP_CONTROLS, partTileHtml, sortParts, section, PART_LIMIT } from './garage.js';
 import { MapView, SPEEDS } from './mapview.js';
 import { weatherChoices, weatherLabel } from './weather.js';
@@ -282,8 +283,9 @@ const build = new Build(viewer, {
   isCabin: (path) => partStats.item(path)?.kind === 'cabin',
   onePerVehicle: (path) => { const it = partStats.item(path); return it?.kind === 'cabin' || it?.type === 'Engine'; },
 });
-// The game's limits on adding parts: 80 parts, one cabin, one engine.
+// The game's limits on adding parts: 80 parts, one cabin, one engine (none with No limits).
 function buildRules(adds) {
+  if (build.noLimits) return null;
   if (build.instances.length + adds.length > PART_LIMIT) return `Can't add it: a vehicle can have at most ${PART_LIMIT} parts`;
   const kind = (path) => { const it = partStats.item(path); return it?.kind === 'cabin' ? 'cabin' : it?.type === 'Engine' ? 'engine' : null; };
   const count = (k) => build.instances.filter((i) => kind(i.path) === k).length + adds.filter((a) => kind(a.path) === k).length;
@@ -421,6 +423,7 @@ async function loadFiles() {
     state.folders = folders;
     state.catCounts = counts;
     state.paintCatalog = paintCatalog(files.map((f) => f.name)); // (the game's paints: paints.js)
+    if (state.view === 'build') fillStickers(); // (the builder open already: its stickers now)
     viewPicker.refresh();
     buildPicker.refresh();
     state.subCounts = null; // (counted again for these folders)
@@ -950,9 +953,11 @@ function setView(mode) {
   viewer.setMode(mode);
   build.onModeChanged();
   build.setBrush(mode === 'build' && state.paintMode === 'brush'); // (its cursor only over the builder's view)
+  if (mode !== 'build' && build.stickerTool) setStickerTool(null);
   refs.modeChanged(mode);
   mapView.modeChanged(mode);
   const part = mode === 'part', bld = mode === 'build', map = mode === 'map';
+  if (bld && state.files?.length && (!stickerPackList || stickerPackList.files !== state.files)) fillStickers(); // (the game's stickers, once its files are read)
   $('viewTools').hidden = !part || !state.info;
   $('empty').hidden = !part || !!state.info;
   $('inspector').hidden = !part || !state.info;
@@ -2072,6 +2077,9 @@ function renderBuildPanel() {
     // wheels that come as a plain and a steering (ST) version, which share the model
     $('bStWrap').hidden = !partStats.hasSteering(inst.path) || sel.some((i) => i.path !== inst.path);
     $('bSt').checked = inst.st;
+    const stickers = sel.reduce((k, i) => k + (i.stickers?.length || 0), 0);
+    $('bStickerRow').hidden = !stickers;
+    $('bStickerCount').textContent = `${stickers} sticker${stickers === 1 ? '' : 's'}`;
     const twins = build.selectionTwins().length;
     $('bTwinHint').hidden = !twins;
     $('bTwinHint').textContent = many
@@ -2222,8 +2230,8 @@ const currentVehicle = () => vehicleStats(buildParts(), partStats);
 function renderGarage() {
   if (state.view !== 'build') return;
   const v = currentVehicle();
-  $('energyBar').innerHTML = energyBarHtml(v);
-  $('bVehicle').innerHTML = vehicleStatsHtml(v);
+  $('energyBar').innerHTML = energyBarHtml(v, { limits: !build.noLimits });
+  $('bVehicle').innerHTML = vehicleStatsHtml(v, { limits: !build.noLimits });
   hydrateIcons($('energyBar'));
   hydrateIcons($('bVehicle'));
   if (!$('partsList').hidden) renderPartsList(v);
@@ -2300,7 +2308,7 @@ function renderPartsList(v = currentVehicle()) {
     .filter(([k]) => k === 'parts' || groups[k].length)
     .map(([k, title]) => `<h2>${title} <span class="count">${groups[k].length}</span></h2><div class="pl-grid">${tiles(groups[k]) || '<div class="hint">No parts yet.</div>'}</div>`).join('');
   $('plMain').scrollTop = scroll;
-  $('plStats').innerHTML = vehicleStatsHtml(v);
+  $('plStats').innerHTML = vehicleStatsHtml(v, { limits: !build.noLimits });
   hydrateIcons($('partsList'));
 }
 function setPartsList(on) {
@@ -2421,6 +2429,17 @@ $('bOpen').addEventListener('click', async () => {
 $('bUndo').addEventListener('click', () => build.undo());
 $('bRedo').addEventListener('click', () => build.redo());
 $('bSym').addEventListener('change', () => build.setSymmetry($('bSym').checked).then(renderBuildPanel).catch((e) => status(e.message, true)));
+// Limits (the game's garage rules) or No limits (none at all), remembered.
+function setLimits(on, save = true) {
+  build.setNoLimits(!on);
+  $('bLimitsSeg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', (b.dataset.l === 'on') === on));
+  renderGarage();
+  if (save) {
+    status(on ? 'Limits: the game\'s garage rules' : 'No limits: any number of parts, cabins and engines, parts inside each other');
+    call('setSettings', { buildLimits: on }).catch(() => {});
+  }
+}
+$('bLimitsSeg').addEventListener('click', (e) => { const b = e.target.closest('button[data-l]'); if (b) setLimits(b.dataset.l === 'on'); });
 $('bGizmo').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-g]');
   if (!b) return;
@@ -2456,6 +2475,64 @@ document.querySelector('#bSelCard .rot').addEventListener('click', (e) => {
 $('bMove').addEventListener('click', () => build.moveSelected().catch((e) => status(e.message, true)));
 $('bDup').addEventListener('click', () => build.duplicateSelected().catch((e) => status(e.message, true)));
 $('bMirror').addEventListener('click', () => build.toggleMirror());
+$('bMirrorSide').addEventListener('click', () => build.mirrorToOtherSide().catch((e) => status(e.message, true)));
+$('bStickerClear').addEventListener('click', () => build.clearStickers());
+
+// ---- stickers (stickers.js): the game's, stuck on the builder's vehicle -------------------------------
+let stickerPackList = null; // pack -> bases (from the game's file list)
+function fillStickers() {
+  if (!stickerPackList || stickerPackList.files !== state.files) {
+    stickerPackList = { files: state.files, packs: stickerPacks(state.files) };
+    const sel = $('bStickerPack'), keep = state.settings.stickerPack;
+    sel.innerHTML = [...stickerPackList.packs.keys()].map((p) => `<option value="${p}">${packLabel(p)} (${stickerPackList.packs.get(p).length})</option>`).join('');
+    if (keep && stickerPackList.packs.has(keep)) sel.value = keep;
+    $('bStickerCard').hidden = !stickerPackList.packs.size;
+  }
+  const bases = stickerPackList.packs.get($('bStickerPack').value) || [];
+  $('bStickerGrid').innerHTML = bases.map((b) => `<button class="sticker" data-base="${b}" title="${b.split('/').pop()}"><img loading="lazy" alt="" src="${stickerThumb(b)}"></button>`).join('');
+  syncStickers();
+}
+function stickerSize() { return Math.min(STICKER_SIZE.max, Math.max(STICKER_SIZE.min, +$('bStickerSize').value || STICKER_SIZE.def)); }
+function stickerAngle() { return ((+$('bStickerAngle').value || 0) * Math.PI) / 180; }
+function syncStickers() {
+  const t = build.stickerTool;
+  for (const b of $('bStickerGrid').children) b.classList.toggle('on', !!t && b.dataset.base === t.base);
+  $('bStickerDone').hidden = !t;
+  $('bStickerSizeV').textContent = `${stickerSize().toFixed(2)} m`;
+  $('bStickerAngleV').textContent = `${Math.round(+$('bStickerAngle').value || 0)}°`;
+}
+function setStickerTool(base) {
+  if (base && state.paintMode === 'brush') setPaintMode('all'); // (one tool on the vehicle at a time)
+  build.setStickerTool(base ? { base, size: stickerSize(), angle: stickerAngle() } : null);
+  syncStickers();
+  if (base) status('Click the vehicle to stick it · Q / E turn · − / + size · Esc: done', false, true);
+  else status('');
+}
+function stickerChanged() {
+  if (build.stickerTool) build.setStickerTool({ ...build.stickerTool, size: stickerSize(), angle: stickerAngle() });
+  syncStickers();
+}
+// keys while sticking: Q / E turn it 15°, - / + size it, Esc puts the tool away
+function stickerKey(k) {
+  if (k === 'escape') { setStickerTool(null); return true; }
+  if (k === 'q' || k === 'e') {
+    const a = (+$('bStickerAngle').value || 0) + (k === 'q' ? 15 : -15);
+    $('bStickerAngle').value = String(((((a + 180) % 360) + 360) % 360) - 180);
+  } else if (k === '-' || k === '_' || k === '=' || k === '+') {
+    $('bStickerSize').value = String(Math.round(Math.min(STICKER_SIZE.max, Math.max(STICKER_SIZE.min, stickerSize() * (k === '-' || k === '_' ? 1 / 1.15 : 1.15))) * 100) / 100);
+  } else return false;
+  stickerChanged();
+  return true;
+}
+$('bStickerPack').addEventListener('change', () => { call('setSettings', { stickerPack: $('bStickerPack').value }).catch(() => {}); state.settings.stickerPack = $('bStickerPack').value; fillStickers(); });
+$('bStickerGrid').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-base]');
+  if (!b) return;
+  setStickerTool(build.stickerTool?.base === b.dataset.base ? null : b.dataset.base);
+});
+$('bStickerSize').addEventListener('input', stickerChanged);
+$('bStickerAngle').addEventListener('input', stickerChanged);
+$('bStickerDone').addEventListener('click', () => setStickerTool(null));
 $('bDel').addEventListener('click', () => build.deleteSelected());
 $('bSkin').addEventListener('change', () => build.setSkin(build.selected, $('bSkin').value).catch((e) => status(e.message, true)));
 $('bOpenPart').addEventListener('click', () => { const inst = build.get(build.selected); if (inst) openModel(inst.path, { skin: inst.skin }); });
@@ -2506,6 +2583,7 @@ function setPaintMode(mode) {
   state.paintMode = mode;
   $('bPaintMode').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   if (mode === 'brush' && !build.brush) build.brush = build.paint || normPaint({ kind: 'color', color: build.paintColor, amount: 0.85 }); // (it starts with the vehicle's paint)
+  if (mode === 'brush' && build.stickerTool) setStickerTool(null); // (one tool on the vehicle at a time)
   build.setBrush(mode === 'brush' && state.view === 'build');
   if (mode === 'brush') status(PAINT_MODES.brush);
   syncBuildPaint();
@@ -2683,6 +2761,7 @@ $('bExport').addEventListener('click', () => {
     parts: build.exportItems({ onlySelected: $('bExpSel').checked }).map((p) => ({ ...p, name: (partName(p.path) || p.name) + (p.st && partStats.hasSteering(p.path) ? ' ST' : '') })), // (named as in the game, as instName())
     name: build.name, format: state.buildFmt, lod: +$('bLod').value, textures: $('bExpTextures').checked, maxTex: +$('bMaxTex').value || 0,
     dds: $('bExpDds').checked, extraMaps: $('bExpExtra').checked, ao: $('bExpAo').checked, split: $('bExpSplit').checked, heat: 0, ...editsForExport(), // (cold, as the builder shows them)
+    stickers: build.exportStickers({ onlySelected: $('bExpSel').checked }),
   }, $('bProgress'), $('bResult'), $('bExport'));
 });
 
@@ -3260,7 +3339,10 @@ document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && k === 'y') { e.preventDefault(); build.redo(); return; }
     if (e.ctrlKey && k === 'd') { e.preventDefault(); build.duplicateSelected().catch((e) => status(e.message, true)); return; }
     if (e.ctrlKey && k === 'a') { e.preventDefault(); if (!build.placing) build.selectAll(); return; }
+    // (the game's garage turns a part vertically with Ctrl+Q / E, horizontally with Shift+Q / E: below, as Q / E)
+    if (e.ctrlKey && !e.altKey && (k === 'q' || k === 'e')) { e.preventDefault(); build.turn('tip', k === 'q' ? 1 : -1); releaseFocus(); return; }
     if (e.ctrlKey || e.altKey || e.metaKey) return;
+    if (build.stickerTool && $('partsList').hidden && stickerKey(k)) { e.preventDefault(); releaseFocus(); return; }
     const dir = e.shiftKey ? -1 : 1;
     if (!$('partsList').hidden && k !== 'h' && k !== 'escape') return; // the list is in front of the vehicle
     switch (k) {
@@ -3269,7 +3351,7 @@ document.addEventListener('keydown', (e) => {
       case 'y': build.turn('roll', dir); break;
       case 'q': build.turn('spin', 1); break; // (left: anticlockwise as seen, as R)
       case 'e': build.turn('spin', -1); break;
-      case 'x': build.toggleMirror(); break;
+      case 'x': if (e.shiftKey) build.mirrorToOtherSide().catch((e2) => status(e2.message, true)); else build.toggleMirror(); break;
       case 'm': $('bSym').checked = !$('bSym').checked; build.setSymmetry($('bSym').checked).then(renderBuildPanel).catch((e) => status(e.message, true)); break;
       case 'g': build.moveSelected().catch((e) => status(e.message, true)); break;
       case 'delete': case 'backspace': build.deleteSelected(); break;
@@ -3321,6 +3403,7 @@ document.addEventListener('keydown', (e) => {
     setShadows(state.settings.shadows !== false, false);
     setArcs(state.settings.arcs !== false, false);
     setAR(state.settings.ar !== false, false);
+    setLimits(state.settings.buildLimits !== false, false);
     setLookAtMe(state.settings.lookAtMe === true, false);
     viewer.sounds.setVolume(fxVolume()); // (the builder and Maps fire with it too)
     showVolume();

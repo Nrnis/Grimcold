@@ -170,31 +170,33 @@ export function vehicleStats(parts, stats) {
 // ---- HUD pieces (HTML) ---------------------------------------------------------------------------
 // The energy bar at the top of the garage: modules' and weapons' use, the free energy, the cabin's
 // and the generators' supply.
-export function energyBarHtml(v) {
+// limits false (No limits): the free energy is not shown red when it runs short.
+export function energyBarHtml(v, { limits = true } = {}) {
   const e = v.energy;
   const cell = (icon, value, cls, tip, big = false) => `<div class="eb-cell ${cls}${big ? ' big' : ''}" title="${esc(tip)}">${gi(icon)}<b>${value}</b></div>`;
   return [
     cell('modules', e.modules ? signed(-e.modules) : '0', e.modules ? 'neg' : 'zero', `Modules use ${e.modules} energy`),
     cell('weapons', e.weapons ? signed(-e.weapons) : '0', e.weapons ? 'neg' : 'zero', `Weapons use ${e.weapons} energy`),
-    cell('energy', e.free > 0 ? '+' + fmt(e.free) : e.free < 0 ? signed(e.free) : '0', e.free > 0 ? 'pos' : e.free < 0 ? 'neg' : 'zero',
+    cell('energy', e.free > 0 ? '+' + fmt(e.free) : e.free < 0 ? signed(e.free) : '0', e.free > 0 ? 'pos' : e.free < 0 && limits ? 'neg' : 'zero',
       e.free >= 0 ? `Free energy: ${e.free} of ${e.supply}` : `Not enough energy: ${e.used} needed, ${e.supply} available`, true),
     cell('cabin', v.cabin ? '+' + fmt(e.cabin) : '—', v.cabin ? 'pos' : 'zero', v.cabin ? `The cabin gives ${e.cabin} energy` : 'No cabin yet'),
     cell('generator', e.nGenerators ? '+' + fmt(e.generators) : '', e.nGenerators ? 'pos' : 'off', e.nGenerators ? `Generators give ${e.generators} energy` : 'No generator'),
   ].join('');
 }
 
-// The vehicle's stats column (parts list, builder panel).
-export function vehicleStatsHtml(v) {
+// The vehicle's stats column (parts list, builder panel). limits false (No limits): nothing red for
+// going past the game's limits (parts, energy, mass limit).
+export function vehicleStatsHtml(v, { limits = true } = {}) {
   const row = (icon, value, label, cls = '', tip = '') => `<div class="vs-row ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${gi(icon)}<div><b>${value}</b><span>${label}</span></div></div>`;
   const out = [];
   const armourNote = v.unknownArmour ? ` (${v.unknownArmour} armour part${v.unknownArmour > 1 ? 's' : ''} not counted: no stats for them yet)` : '';
   out.push(row('health', v.durability != null ? `${fmt(v.durability)} pts` : '—', 'Durability', '',
     v.cabin ? `The cabin's durability plus what armour adds (frames add none)${armourNote}` : 'A vehicle needs a cabin'));
-  out.push(row('parts', `${v.parts}/${PART_LIMIT}`, 'Total parts', v.parts > PART_LIMIT ? 'bad' : '', `${PART_LIMIT} parts is the most a vehicle can have (Engineers level 30 and up)`));
+  out.push(row('parts', `${v.parts}/${PART_LIMIT}`, 'Total parts', limits && v.parts > PART_LIMIT ? 'bad' : '', `${PART_LIMIT} parts is the most a vehicle can have (Engineers level 30 and up)`));
   const e = v.energy;
-  out.push(row('energy', `${e.used}/${e.supply} pts`, 'Energy', e.used > e.supply ? 'bad' : '', `Weapons ${e.weapons} + modules ${e.modules} of cabin ${e.cabin} + generators ${e.generators}`));
+  out.push(row('energy', `${e.used}/${e.supply} pts`, 'Energy', limits && e.used > e.supply ? 'bad' : '', `Weapons ${e.weapons} + modules ${e.modules} of cabin ${e.cabin} + generators ${e.generators}`));
   const massTip = v.unknown ? `${v.unknown} part${v.unknown > 1 ? 's have' : ' has'} no stats yet and ${v.unknown > 1 ? 'are' : 'is'} left out` : '';
-  out.push(row('mass', `${fmt(v.mass)}${v.unknown ? '+' : ''}${v.massLimit != null ? (v.unknown ? ' / ' : '/') + fmt(v.massLimit) : ''} kg`, 'Mass', v.tooHeavy ? 'bad' : '',
+  out.push(row('mass', `${fmt(v.mass)}${v.unknown ? '+' : ''}${v.massLimit != null ? (v.unknown ? ' / ' : '/') + fmt(v.massLimit) : ''} kg`, 'Mass', limits && v.tooHeavy ? 'bad' : '',
     [v.massLimit != null ? `Mass limit ${fmt(v.massLimit)} kg: a heavier vehicle cannot go into battle` : '', massTip].filter(Boolean).join('. ')));
   out.push('<div class="vs-head">When driving</div>');
   out.push(row('speed', v.speed != null ? `${fmt(v.speed)} km/h` : '—', v.speedCapped ? 'Top speed (slowest movement part)' : 'Top speed', '',
@@ -206,8 +208,8 @@ export function vehicleStatsHtml(v) {
   }
   const notes = [];
   if (!v.cabin && v.parts) notes.push('No cabin: the energy, tonnage and speed come from the cabin.');
-  if (v.cabins.length > 1) notes.push(`${v.cabins.length} cabins: a vehicle has one; the first one counts.`);
-  if (v.engines > 1) notes.push(`${v.engines} engines: a vehicle has one; the first one counts.`);
+  if (v.cabins.length > 1) notes.push(`${v.cabins.length} cabins: ${limits ? 'a vehicle has one; ' : ''}the first one counts.`);
+  if (v.engines > 1) notes.push(`${v.engines} engines: ${limits ? 'a vehicle has one; ' : ''}the first one counts.`);
   if (v.unknown) notes.push(`No stats yet for ${v.unknown} part${v.unknown > 1 ? 's' : ''} (${v.unknownArmour ? 'armour and other parts' : 'parts'} this tool has no in-game name for): the mass${v.unknownArmour ? ' and durability' : ''} leave${v.unknownArmour ? '' : 's'} ${v.unknown > 1 ? 'them' : 'it'} out.`);
   if (notes.length) out.push(`<div class="vs-note">${notes.map(esc).join('<br>')}</div>`);
   return out.join('');
@@ -266,6 +268,8 @@ export const CONTROLS = [
   [['t'], 'Tip'],
   [['y'], 'Roll'],
   [['x'], 'Mirror'],
+  [['shift', '+', 'x'], 'To other side'],
+  [['ctrl', '+', 'q'], 'Tip (as the game)'],
   [['m'], 'Symmetry'],
   [['g'], 'Move'],
   [['ctrl', '+', 'd'], 'Copy'],

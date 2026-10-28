@@ -309,7 +309,12 @@ Switch to **Vehicle Builder** at the top to put parts together like in the game'
 - **Hover** a part and it gets the garage's white outline (its silhouette and inner edges), with its
   name and type beside the cursor.
 - **The garage's rules**: one cabin per vehicle, one engine, at most 80 parts. A part that would
-  break one stays on the cursor and the status line says why.
+  break one stays on the cursor and the status line says why. **Limits | No limits** (beside Symmetry)
+  switches every rule off: any number of parts, cabins and engines, parts dropped inside each other,
+  Symmetry's and To the other side's copies for cabins and engines too and where they overlap, a
+  moved part's twin following wherever it lands, and nothing red for going past the game's limits
+  (energy, parts, mass limit) or for parts that are not welded on. Snapping to weld points and the
+  grid stays. The choice is remembered.
 - **Augmented reality** (**F** or the **Aug. reality** button), as in the garage:
   - the vehicle's free weld points show as white boxes, and a selected part's welded points are
     green; the points on a frame's sides, a wheel's mount and a cabin's underside are drawn with a
@@ -359,7 +364,12 @@ Switch to **Vehicle Builder** at the top to put parts together like in the game'
   the same. Each press turns exactly 90° of what is shown, in a short turn the eye can follow. A
   turn that leaves no weld points against that face stays as you turned it (not welded) instead of
   the snap turning it back, and R then Shift+R always comes back to where it was. A selected part
-  turns the same way (R about the way its weld points face). X mirrors, Esc cancels.
+  turns the same way (R about the way its weld points face). X mirrors, Esc cancels. The game's
+  garage keys work too: Shift+Q / E turn a part horizontally (as Q / E), Ctrl+Q / E vertically (as T).
+- **To the other side** (Shift+X, or the part card's button): a mirrored copy of the selected parts
+  on the other side of the mirror plane (as Symmetry's), for a side built without Symmetry. A part on
+  the plane, one that already has its copy there, and a copy that would overlap a part get none
+  (the status line says how many); one Ctrl+Z takes them all back.
 - **Symmetry** (M): every part you place also gets a mirrored twin on the other side. The mirror
   plane runs through the middle of the cabin (or x = 0 without one), so a base an odd number of
   cells wide is symmetric too. A twin that would overlap something is left out (the status line
@@ -403,6 +413,14 @@ Switch to **Vehicle Builder** at the top to put parts together like in the game'
   - Copies take their part's paint, Ctrl+Z / Ctrl+Y undo and redo painting, and the paints belong to
     the build (saved in the `.xobuild`), on top of any colour edits a texture has of its own. Driving
     and firing show them too.
+- **Stickers**: the game's own (858 in 70 packs: factions, partners, events, numbers, shapes ...),
+  picked by pack and picture in the **Stickers** card. The chosen one follows the cursor over the
+  vehicle, see-through, lying on the part under it; a click sticks it there. **Size** and **Turn**
+  (or **− / +** and **Q / E** while sticking) set it, **Esc** or **Done** puts it away. A sticker
+  belongs to its part: it moves, turns and mirrors with it, is saved in the `.xobuild`, comes back
+  with Ctrl+Z / Ctrl+Y, and goes out in the exports (a mesh with the sticker's picture, blended by
+  its alpha). The part card counts a selected part's stickers, and **Take stickers off** takes them
+  off. Copies of a part are made without its stickers.
 - The **build panel** shows the size in metres and cells, and whether every part is attached
   to the rest through weld points.
 - **Save** (on the builder's toolbar and in the build panel, Ctrl+S) writes the build to its

@@ -24,6 +24,11 @@ import { CELL, Viewer } from './viewer.js';
 import { physShapes, placeHulls, boxHull, partsOverlap } from './phys.js';
 import { WheelMarks, isWheel } from './wheelmarks.js';
 import { normPaint, paintForFile, DEFAULT_COLOR } from './paints.js';
+import { stickerMesh, stickerTexture, disposeSticker, stickerAt, stickerExport, surfaceMeshes } from './stickers.js';
+
+// A sticker record as a file or the undo history holds it (stickers.js stickerAt).
+const vec3 = (a) => Array.isArray(a) && a.length === 3 && a.every(Number.isFinite);
+const validSticker = (s) => s && typeof s.base === 'string' && s.base.startsWith('textures/stickers/') && vec3(s.pos) && vec3(s.normal) && vec3(s.up) && s.size > 0 && s.size < 100;
 
 const HALF = CELL / 2;
 const OUTLINE = 0xffffff, OUTLINE_BAD = 0xff5a4f; // the garage's part outline (and for a part that can't go there)
@@ -113,6 +118,8 @@ export class Build {
     this.paintColor = DEFAULT_COLOR.slice(); // (the last colour, kept in the file while there is no paint)
     this.brushOn = false; // painting with the brush: a click (or a drag) paints the parts under it
     this.brush = null;    // what it paints (amount 0: it takes paint off)
+    this.stickerTool = null; // sticking stickers: { base, size, angle (radians) }: a click on a part sticks it there
+    this.noLimits = false; // No limits: none of the garage's rules (parts, cabins, engines, overlaps; no red warnings)
     this.history = [this.snapshot()];
     this.future = [];
     this.busy = 0;
@@ -171,6 +178,18 @@ export class Build {
       e.preventDefault();
       try { c.setPointerCapture(e.pointerId); } catch { /* synthetic event */ }
       this.marquee = { x0: e.clientX, y0: e.clientY, remove: (e.ctrlKey || e.metaKey) && !e.shiftKey, active: false };
+    }, { capture: true });
+    // The sticker tool: the left button on a part sticks the chosen sticker where the cursor is (on
+    // empty space it turns the camera, as ever); the see-through sticker follows the cursor.
+    c.addEventListener('pointerdown', (e) => {
+      if (viewer.mode !== 'build' || e.button !== 0 || !this.stickerTool || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (this.placing || this.busy || this.loadingNow) return;
+      const hit = this.stickerHit(e);
+      if (!hit) return;
+      e.stopImmediatePropagation();
+      leaveField();
+      e.preventDefault();
+      this.placeSticker(hit).catch((err) => this.status(err.message));
     }, { capture: true });
     // The brush: the left button on a part paints it, and every part the cursor passes over while it is
     // held (a mirror twin too, with Symmetry on); Alt+click takes the part's paint into the brush. On
@@ -238,8 +257,9 @@ export class Build {
       if (pr && !pr.moving && Math.hypot(e.clientX - pr.x, e.clientY - pr.y) > 6) this.beginDragMove();
       if (this.placing) this.updatePlacement();
       else if (!this.down && !pr) this.hover(this.instanceAt(e), e);
+      if (this.stickerTool && !this.down) this.previewSticker(e);
     });
-    c.addEventListener('pointerleave', () => { if (viewer.mode === 'build') this.hover(null); });
+    c.addEventListener('pointerleave', () => { if (viewer.mode === 'build') { this.hover(null); this.clearStickerPreview(); } });
     c.addEventListener('contextmenu', (e) => { if (viewer.mode === 'build') e.preventDefault(); });
   }
 
@@ -394,7 +414,7 @@ export class Build {
   // ---- instances -------------------------------------------------------------------------------
   // st: a wheel's steering version (same model, other stats: "Array ST").
   // paint: its own paint (normPaint), or none (the vehicle's shows on it).
-  async createInstance({ path, skin = '', position = [0, 0, 0], quaternion = [0, 0, 0, 1], mirrored = false, st = false, id = null, paint = null }) {
+  async createInstance({ path, skin = '', position = [0, 0, 0], quaternion = [0, 0, 0, 1], mirrored = false, st = false, id = null, paint = null, stickers = null }) {
     const own = paint ? normPaint(paint) : null;
     const [info, phys] = await Promise.all([this.getInfo(path, skin), physShapes(path)]);
     const group = await this.v.makeModel(info, 0, { texMax: this.texMax, paint: own ?? this.paint });
@@ -409,7 +429,116 @@ export class Build {
     this.updateInstance(inst);
     this.applyPaints([inst]); // (the vehicle's paint may have changed while it loaded)
     this.addArc(group);
+    inst.stickers = Array.isArray(stickers) ? stickers.filter(validSticker).map((s) => ({ ...s })) : [];
+    if (inst.stickers.length) await this.drawStickers(inst);
     return inst;
+  }
+
+  // ---- stickers (stickers.js) ---------------------------------------------------------------------
+  // A part's stickers drawn anew from its records (children of its model, in its own space).
+  async drawStickers(inst) {
+    const gen = (inst.stickerGen = (inst.stickerGen || 0) + 1);
+    const texs = await Promise.all(inst.stickers.map((s) => stickerTexture(s.base).catch(() => null)));
+    if (gen !== inst.stickerGen || inst.group.userData.disposed) return; // (redrawn meanwhile, or gone)
+    for (const c of [...inst.group.children]) if (c.userData.sticker) disposeSticker(c);
+    let missing = 0;
+    inst.stickers.forEach((s, k) => {
+      const m = texs[k] && stickerMesh(inst.group, s, texs[k]);
+      if (m) inst.group.add(m);
+      else missing++;
+    });
+    if (missing) this.status(`${missing} sticker${missing > 1 ? 's' : ''} on ${this.nameOf(inst.info)} could not be shown (not in this game version's files)`);
+    this.v.dirty = true;
+  }
+
+  // tool: { base, size (m), angle (radians) } or null (off)
+  setStickerTool(tool) {
+    this.stickerTool = tool ? { ...tool } : null;
+    if (tool && this.placing) this.cancelPlacing();
+    this.clearStickerPreview();
+    this.v.canvas.style.cursor = tool ? 'copy' : this.v.mode === 'build' ? 'crosshair' : '';
+    if (tool && this.lastPointer) this.previewSticker(this.lastPointer);
+    this.onChange();
+  }
+
+  // The part's surface under the cursor: { inst, point, normal } (world; the normal towards the camera), or null.
+  stickerHit(e) {
+    const rc = this.v.raycaster;
+    rc.setFromCamera(this.v.ndc(e), this.v.camera);
+    const meshes = this.instances.filter((i) => i.group.visible).flatMap((i) => surfaceMeshes(i.group));
+    const hit = rc.intersectObjects(meshes, false).find((h) => h.face);
+    if (!hit) return null;
+    const inst = this.instanceOfObject(hit.object);
+    if (!inst) return null;
+    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+    if (n.dot(rc.ray.direction) > 0) n.negate();
+    return { inst, point: hit.point.clone(), normal: n };
+  }
+
+  clearStickerPreview() {
+    if (this.stickerPreview) { disposeSticker(this.stickerPreview); this.stickerPreview = null; this.v.dirty = true; }
+  }
+
+  // The chosen sticker, see-through, where a click would stick it (once a frame at most).
+  previewSticker(e) {
+    this.stickerPointer = e;
+    if (this.stickerFrame) return;
+    this.stickerFrame = requestAnimationFrame(async () => {
+      this.stickerFrame = 0;
+      const t = this.stickerTool, ev = this.stickerPointer;
+      if (!t || !ev) return this.clearStickerPreview();
+      const hit = this.stickerHit(ev);
+      const tex = hit ? await stickerTexture(t.base).catch(() => null) : null;
+      this.clearStickerPreview();
+      if (!hit || !tex || this.stickerTool !== t) return;
+      const m = stickerMesh(hit.inst.group, stickerAt(hit.inst.group, t.base, hit.point, hit.normal, t.angle, t.size), tex, { opacity: 0.6 });
+      if (!m) return;
+      hit.inst.group.add(m);
+      this.stickerPreview = m;
+      this.v.dirty = true;
+    });
+  }
+
+  async placeSticker(hit) {
+    const t = this.stickerTool;
+    if (!t) return;
+    const s = stickerAt(hit.inst.group, t.base, hit.point, hit.normal, t.angle, t.size);
+    hit.inst.stickers.push(s);
+    this.clearStickerPreview();
+    await this.drawStickers(hit.inst);
+    this.commit();
+    this.status(`Sticker stuck on ${this.nameOf(hit.inst.info)} (Ctrl+Z takes it off)`);
+    this.onChange();
+  }
+
+  // No limits (on) or the garage's rules: the held part and its twin, the red parts and the panel follow.
+  setNoLimits(on) {
+    if (this.noLimits === !!on) return; // (the start-up's restore of the same setting is no change: no autosave, no redraw)
+    this.noLimits = !!on;
+    this.markLoose();
+    if (this.placing) this.syncTwin().then(() => this.updatePlacement()).catch(() => {});
+    this.onChange();
+  }
+
+  // Takes every sticker off the selected parts.
+  clearStickers() {
+    const sel = this.selection().filter((i) => i.stickers?.length);
+    if (!sel.length) return;
+    const n = sel.reduce((k, i) => k + i.stickers.length, 0);
+    for (const inst of sel) {
+      inst.stickers = [];
+      inst.stickerGen = (inst.stickerGen || 0) + 1;
+      for (const c of [...inst.group.children]) if (c.userData.sticker) disposeSticker(c);
+    }
+    this.v.dirty = true;
+    this.commit();
+    this.status(`${n} sticker${n > 1 ? 's' : ''} taken off (Ctrl+Z puts ${n > 1 ? 'them' : 'it'} back)`);
+    this.onChange();
+  }
+
+  // The stickers for an export: world space, each piece with its sticker's texture.
+  exportStickers({ onlySelected = false } = {}) {
+    return (onlySelected && this.sel.length ? this.selection() : this.instances).flatMap((i) => stickerExport(i.group));
   }
 
   // A weapon's firing arc rides along as a child of its model (moves, turns and mirrors with it).
@@ -436,6 +565,9 @@ export class Build {
 
   removeInstance(inst) {
     this.instances = this.instances.filter((i) => i !== inst);
+    if (this.stickerPreview?.parent === inst.group) this.clearStickerPreview();
+    for (const c of [...inst.group.children]) if (c.userData.sticker) disposeSticker(c); // (their own geometry and materials)
+    inst.stickerGen = (inst.stickerGen || 0) + 1;
     this.v.disposeModel(inst.group);
     if (this.hovered === inst) this.hover(null);
     if (this.placing?.onPart === inst) this.placing.onPart = null; // (no outline left on a removed part)
@@ -448,6 +580,7 @@ export class Build {
     const t = { path: inst.path, skin: inst.skin, position: inst.group.position.toArray().map((v) => Math.round(v * 1e5) / 1e5), quaternion: inst.group.quaternion.toArray().map((v) => Math.round(v * 1e6) / 1e6), mirrored: inst.mirrored };
     if (inst.st) t.st = true;
     if (inst.paint) t.paint = inst.paint; // (its own paint: undo, copies and the file keep it)
+    if (inst.stickers?.length) t.stickers = inst.stickers;
     return t;
   }
 
@@ -595,7 +728,7 @@ export class Build {
     const moving = p.moveIds.length > 0;
     // (a vehicle has one cabin and one engine: those get no mirror copy; the cabin sets the mirror
     // plane anyway, and its twin made Symmetry refuse it as a second cabin)
-    const single = p.group ? p.members.some((m) => this.onePerVehicle(m.path)) : this.onePerVehicle(p.path);
+    const single = !this.noLimits && (p.group ? p.members.some((m) => this.onePerVehicle(m.path)) : this.onePerVehicle(p.path));
     const want = this.symmetry && !single && (!moving || (!p.group && p.twinId != null));
     if (want && !p.twin) {
       const twin = p.group ? await this.makeCompound(p.members, p.origin) : await this.v.makeModel(p.info, 0, { texMax: this.texMax, ghost: true, paint: p.paint ?? this.paint });
@@ -790,6 +923,47 @@ export class Build {
     this.commitEdit([...sel, ...twins.map(([, t]) => t)], before, 'mirror it');
   }
 
+  // A mirrored copy of each selected part on the other side of the mirror plane (the middle of the
+  // cabin, as Symmetry's), for a side built without Symmetry. A part on the plane, one whose copy is
+  // there already, a cabin or engine (onePerVehicle, under the garage's limits) and a copy that would
+  // overlap a part get none; the status line says what was made and what not. One undo step.
+  async mirrorToOtherSide() {
+    if (this.placing || this.busy) return;
+    const sel = this.selection();
+    if (!sel.length) { this.status('Select the parts to copy to the other side first'); return; }
+    const todo = [], skip = { plane: 0, there: 0, one: 0, overlap: 0 };
+    for (const inst of sel) {
+      if (this.onPlane(inst)) skip.plane++;
+      else if (this.twinOf(inst)) skip.there++;
+      else todo.push(inst);
+    }
+    const allowed = todo.filter((inst) => this.noLimits || !this.onePerVehicle(inst.path) || !this.rules([{ path: inst.path }])); // (a second cabin / engine only with No limits)
+    skip.one = todo.length - allowed.length;
+    const why = allowed.length ? this.rules(allowed.map((i) => ({ path: i.path }))) : null;
+    if (why) { this.status(why); return; }
+    this.busy = true;
+    const made = [];
+    try {
+      for (const inst of allowed) {
+        const tw = this.twinTransform(inst.group.position, inst.group.quaternion, inst.mirrored);
+        const copy = await this.createInstance({ path: inst.path, skin: inst.skin, st: inst.st, paint: inst.paint, position: tw.position.toArray(), quaternion: tw.quaternion.toArray(), mirrored: tw.mirrored });
+        if (!this.noLimits && this.instances.some((o) => o !== copy && partsOverlap(copy.hulls, o.hulls))) { this.removeInstance(copy); skip.overlap++; continue; }
+        made.push(copy);
+      }
+    } finally {
+      this.busy = false;
+    }
+    if (made.length) {
+      this.setSelection(made.map((i) => i.id));
+      this.commit();
+    }
+    const one = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+    const left = [skip.there && one(skip.there, 'has its copy there already', 'have their copies there already'), skip.plane && one(skip.plane, 'lies on the mirror plane', 'lie on the mirror plane'),
+      skip.one && `${skip.one} can't have a second (one cabin, one engine)`, skip.overlap && one(skip.overlap, 'would overlap a part', 'would overlap parts')].filter(Boolean);
+    this.status(`${made.length ? `Mirrored ${made.length} part${made.length > 1 ? 's' : ''} to the other side` : 'Nothing mirrored'}${left.length ? ` (${left.join(', ')})` : ''}`);
+    this.onChange();
+  }
+
   // The pairs of parts that overlap, of the given parts with each other and with the rest.
   overlapsOf(parts) {
     const edited = new Set(parts.filter(Boolean)), out = new Set();
@@ -808,7 +982,7 @@ export class Build {
   commitEdit(parts, before, what) {
     const after = this.overlapsOf(parts);
     this.commit();
-    const fresh = [...after].filter((k) => !before.has(k)).length;
+    const fresh = this.noLimits ? 0 : [...after].filter((k) => !before.has(k)).length;
     if (fresh) this.status(`Careful: after that ${what.replace(/ it$/, '')} it overlaps ${fresh > 1 ? `${fresh} other parts` : 'another part'} (move it clear, or Ctrl+Z)`);
     return !fresh;
   }
@@ -988,14 +1162,14 @@ export class Build {
       p.twin.visible = Math.abs(pos.x + F.center.x - mx) > 0.01; // a part centred on the mirror plane has no twin
       if (p.twin.visible) { // the mirror copy must not overlap anything either (nor the part itself)
         const twinHulls = this.heldHulls(p.twin, new THREE.Matrix4().compose(tw.position, tw.quaternion, new THREE.Vector3(tw.mirrored ? -1 : 1, 1, 1)));
-        p.twinValid = !partsOverlap(twinHulls, held) && !others.some((i) => partsOverlap(twinHulls, i.hulls));
+        p.twinValid = this.noLimits || (!partsOverlap(twinHulls, held) && !others.some((i) => partsOverlap(twinHulls, i.hulls)));
       }
       this.tint(p.twin, p.twinValid ? GHOST : GHOST_BAD);
     }
     // A moved part's twin steps aside while it is held, and follows it on the drop; one that can't
     // follow (its mirrored spot taken, or the part on the mirror plane) stays, and is in the way.
     const stays = p.twinId != null && this.symmetry && !(p.twin?.visible && p.twinValid) ? this.get(p.twinId) : null;
-    p.valid = !others.some((i) => partsOverlap(held, i.hulls)) && !(stays && partsOverlap(held, stays.hulls));
+    p.valid = this.noLimits || (!others.some((i) => partsOverlap(held, i.hulls)) && !(stays && partsOverlap(held, stays.hulls)));
     p.hasPos = true;
     p.snapped = snapped;
     p.onPart = onPart;
@@ -1065,6 +1239,7 @@ export class Build {
     const list = [...cands.values()].sort((a, b) => a.d - b.d);
     const known = new Map();
     const free = (c) => { // (no overlap with any other part's hulls: the parts whose boxes meet first)
+      if (this.noLimits) return true; // (any spot will do)
       if (known.has(c.key)) return known.get(c.key);
       const box = F.box.clone().translate(c.X), held = this.heldHulls(p.ghost, new THREE.Matrix4().compose(c.X, q, S));
       const ok = !live.some((i) => i.box.intersectsBox(box) && partsOverlap(held, i.hulls));
@@ -1148,7 +1323,7 @@ export class Build {
           });
           const twins = this.symmetry ? this.followTwins(p.twinPairs.map(([a, t]) => [this.get(a), this.get(t)])) : { stayed: [], undo: () => {} };
           // a twin that couldn't follow stays where it was: if the moved parts landed on it, the move is off
-          if (twins.stayed.some((t) => moved.some((i) => partsOverlap(t.hulls, i.hulls)))) {
+          if (!this.noLimits && twins.stayed.some((t) => moved.some((i) => partsOverlap(t.hulls, i.hulls)))) {
             twins.undo();
             moved.forEach((i, k) => this.restoreTransform(i, before[k]));
             this.setSelection(p.moveIds);
@@ -1219,7 +1394,7 @@ export class Build {
     for (const [inst, twin] of pairs) this.matchTwin(inst, twin);
     const stayed = [];
     pairs.forEach(([inst, twin], k) => {
-      if (this.onPlane(inst) || this.instances.some((o) => o !== twin && !twins.has(o) && o.group.visible && partsOverlap(twin.hulls, o.hulls))) {
+      if (this.onPlane(inst) || (!this.noLimits && this.instances.some((o) => o !== twin && !twins.has(o) && o.group.visible && partsOverlap(twin.hulls, o.hulls)))) {
         this.restoreTransform(twin, old[k]);
         stayed.push(twin);
       }
@@ -1228,7 +1403,7 @@ export class Build {
     for (let changed = true; changed;) {
       changed = false;
       pairs.forEach(([, twin], k) => {
-        if (stayed.includes(twin) || !stayed.some((s) => partsOverlap(twin.hulls, s.hulls))) return;
+        if (this.noLimits || stayed.includes(twin) || !stayed.some((s) => partsOverlap(twin.hulls, s.hulls))) return;
         this.restoreTransform(twin, old[k]);
         stayed.push(twin);
         changed = true;
@@ -1398,7 +1573,7 @@ export class Build {
     const main = comps.find((g) => g.some((i) => this.isCabin(i.path))) || comps[0];
     this.loose = new Set(comps.filter((g) => g !== main).flat().map((i) => i.id));
     for (const inst of this.instances) {
-      const on = this.loose.has(inst.id);
+      const on = !this.noLimits && this.loose.has(inst.id); // (No limits: a part may float)
       for (const m of inst.group.userData.materials) {
         const u = m.userData.xo.u;
         if (on) u.xoOverlay.value.set(0xef5b5b);
@@ -1747,6 +1922,8 @@ export class Build {
       inst.paint = p.paint ? normPaint(p.paint) : null;
       inst.group.scale.x = inst.mirrored ? -1 : 1;
       this.updateInstance(inst);
+      const want = Array.isArray(p.stickers) ? p.stickers : [];
+      if (JSON.stringify(want) !== JSON.stringify(inst.stickers || [])) { inst.stickers = want.map((s) => ({ ...s })); await this.drawStickers(inst); }
     }
     this.paint = data.paint ? normPaint(data.paint) : null;
     this.applyPaints();
@@ -1791,7 +1968,7 @@ export class Build {
   serialize() {
     return {
       app: 'Grimcold', kind: 'build', version: 1, name: this.name,
-      parts: this.instances.map((i) => { const t = this.transformOf(i); return { path: t.path, skin: t.skin, position: t.position, rotation: t.quaternion, mirrored: t.mirrored, ...(t.st ? { st: true } : {}), ...(t.paint ? { paint: paintForFile(t.paint) } : {}) }; }),
+      parts: this.instances.map((i) => { const t = this.transformOf(i); return { path: t.path, skin: t.skin, position: t.position, rotation: t.quaternion, mirrored: t.mirrored, ...(t.st ? { st: true } : {}), ...(t.paint ? { paint: paintForFile(t.paint) } : {}), ...(t.stickers ? { stickers: t.stickers } : {}) }; }),
       paint: this.paint ? paintForFile(this.paint) : { color: this.paintColor, amount: 0 },
     };
   }
@@ -1825,7 +2002,7 @@ export class Build {
       let k = 0;
       for (const p of data.parts || []) {
         try {
-          const inst = await this.createInstance({ path: p.path, skin: p.skin || '', position: p.position, quaternion: p.rotation || p.quaternion, mirrored: p.mirrored, st: p.st, paint: p.paint });
+          const inst = await this.createInstance({ path: p.path, skin: p.skin || '', position: p.position, quaternion: p.rotation || p.quaternion, mirrored: p.mirrored, st: p.st, paint: p.paint, stickers: p.stickers });
           if (gen !== this.loadGen) { this.removeInstance(inst); return null; }
         } catch (e) {
           if (gen !== this.loadGen) return null;

@@ -68,7 +68,7 @@ namespace {
 constexpr wchar_t kAppTitle[] = L"Grimcold";
 constexpr wchar_t kWindowClass[] = L"GrimcoldWindow";
 constexpr wchar_t kUiHost[] = L"xo.app";
-constexpr char kVersion[] = "1.0.3";
+constexpr char kVersion[] = "1.0.4";
 constexpr UINT WM_APP_RUN = WM_APP + 1;
 
 // ---------------------------------------------------------------------------------------------
@@ -904,6 +904,25 @@ void applyView(std::vector<uint8_t> &rgba, const std::string &view, xo::PixelFor
 
 // Decoded pixels of a texture or an imported image, as PNG (view: see applyView) or as raw RGBA
 // ("XORG" u32 w u32 h data) for /rgba.
+// A game texture decoded (its level nearest maxSide, 0: full size) as an image for an export.
+std::shared_ptr<const xo::ImageRGBA> decodedTexture(const xo::GameData &gd, const std::string &base, int maxSide, std::string *err) {
+    xo::Texture t;
+    if (!xo::loadTextureHeader(gd, base, t, err))
+        return nullptr;
+    const int count = static_cast<int>(t.info.levels.size());
+    int lv = 0;
+    while (maxSide > 0 && lv + 1 < count && std::max(t.info.levels[lv].width, t.info.levels[lv].height) > static_cast<uint32_t>(maxSide))
+        ++lv;
+    xo::loadTextureLevels(gd, t, lv, lv, nullptr);
+    lv = availableLevel(t, lv);
+    if (lv < 0)
+        return nullptr;
+    auto img = std::make_shared<xo::ImageRGBA>();
+    if (!xo::decodeLevel(t, lv, img->rgba, img->w, img->h, err))
+        return nullptr;
+    return img;
+}
+
 Response serveDecoded(const xo::GameData &gd, const std::map<std::string, std::string> &q, bool png) {
     std::vector<uint8_t> rgba;
     uint32_t w = 0, h = 0;
@@ -3186,6 +3205,31 @@ void handleCommand(double id, const std::string &cmd, const ujson::Value &args) 
             reply(id, false, {}, "the build is empty");
             return;
         }
+        // the builder's stickers (ui/stickers.js): their meshes in world space, as the parts' matrices
+        struct StickerIn {
+            std::string base;
+            xo::MeshGeometry g;
+        };
+        std::vector<StickerIn> stickers;
+        for (const auto &s : args["stickers"].items()) {
+            StickerIn in;
+            in.base = s["base"].str();
+            auto floats = [](const ujson::Value &a, std::vector<float> &v) {
+                for (const auto &x : a.items())
+                    v.push_back(static_cast<float>(x.num(0)));
+            };
+            floats(s["positions"], in.g.position);
+            floats(s["normals"], in.g.normal);
+            floats(s["uvs"], in.g.uv0);
+            const size_t n = in.g.position.size() / 3;
+            if (in.base.rfind("textures/stickers/", 0) != 0 || n < 3 || n % 3 || in.g.normal.size() != n * 3 || in.g.uv0.size() != n * 2)
+                continue;
+            in.g.vertexCount = static_cast<uint32_t>(n);
+            in.g.indices.resize(n);
+            for (size_t i = 0; i < n; ++i)
+                in.g.indices[i] = static_cast<uint32_t>(i);
+            stickers.push_back(std::move(in));
+        }
         xo::ExportOptions opt;
         const std::string format = args["format"].str("glb");
         opt.format = format == "gltf" ? xo::ExportOptions::Format::GLTF : format == "obj" ? xo::ExportOptions::Format::OBJ
@@ -3225,11 +3269,35 @@ void handleCommand(double id, const std::string &cmd, const ujson::Value &args) 
             reply(id, false, {}, why);
             return;
         }
-        runTask(id, true, [id, gd, items, buildName, opt, out] {
+        runTask(id, true, [id, gd, items, buildName, opt, out, stickers = std::move(stickers)] {
             std::vector<fs::path> written;
             std::vector<std::string> warnings;
             std::string err;
-            const bool ok = xo::exportScene(*gd, items, buildName, out, opt, written, warnings, &err, progressFor(id));
+            // each sticker a mesh of its own, its picture its colour (one image per sticker kind)
+            std::map<std::string, std::shared_ptr<const xo::ImageRGBA>> images;
+            std::vector<xo::CustomMesh> custom;
+            for (const auto &s : stickers) {
+                auto &img = images[s.base];
+                if (!img)
+                    img = decodedTexture(*gd, s.base, opt.maxTextureSize, nullptr);
+                if (!img) {
+                    warnings.push_back("a sticker's picture could not be read (" + s.base + ")");
+                    continue;
+                }
+                std::string key = s.base.substr(std::string("textures/stickers/").size());
+                std::replace(key.begin(), key.end(), '/', '_');
+                xo::CustomMesh cm;
+                cm.name = "sticker_" + key;
+                cm.group = "stickers";
+                cm.g = s.g;
+                cm.material = "sticker_" + key;
+                cm.albedo = img;
+                cm.albedoName = "sticker_" + key + ".png";
+                cm.blend = true;
+                cm.roughness = 0.55f;
+                custom.push_back(std::move(cm));
+            }
+            const bool ok = xo::exportScene(*gd, items, custom, buildName, out, opt, written, warnings, &err, progressFor(id));
             postToUi([id, ok, err, written, warnings, out] {
                 if (!ok) {
                     reply(id, false, {}, err);

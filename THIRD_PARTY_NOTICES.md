@@ -5,7 +5,7 @@ under the GNU GPL v3 with additional terms ([LICENSE](LICENSE), [NOTICE.md](NOTI
 
 | Component | Where | Licence |
 |---|---|---|
-| three.js r174, with its OrbitControls, TransformControls and RoomEnvironment | `ui/lib/three/` | MIT |
+| three.js r174, with its OrbitControls, TransformControls, RoomEnvironment and DecalGeometry | `ui/lib/three/` | MIT |
 | Microsoft Edge WebView2 SDK 1.0.4191.47 (headers and the static loader) | `third_party/webview2/`, linked into `Grimcold.exe` | BSD-3-Clause |
 | Zstandard (libzstd 1.5.7, the Windows build that ships with Git for Windows) | `third_party/zstd/libzstd.dll`, next to `Grimcold.exe` | BSD-3-Clause (zstd is BSD / GPLv2; used under BSD); its divsufsort part MIT |
 | libvorbis' Vorbis setup headers, generated with libvorbis | `src/xo/VorbisSetups.inc` | BSD-3-Clause |
