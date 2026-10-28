@@ -153,7 +153,7 @@ export class PaintPicker {
       <div class="pp-ar pp-color-row"><span class="pp-color-label">${tr('Colour')}</span><input type="color" class="pp-color" value="#8c2119"><span></span></div>
       <div class="pp-ar pp-finish-row" title="How the paint shines: as the part does (Matte), as a metallic paint, or as polished metal (Chrome)"><span>${tr('Finish')}</span><div class="seg small pp-finish"><button data-finish="" class="on">${tr('Matte')}</button><button data-finish="metallic">${tr('Metallic')}</button><button data-finish="chrome">${tr('Chrome')}</button></div><span></span></div>
       <div class="pp-ar"><span>${tr('Amount')}</span><input type="range" class="pp-amount" min="0" max="1" step="0.01" value="0"><span class="val pp-amount-val">0%</span></div>
-      <div class="pp-ar pp-size-row" hidden title="How big the pattern is laid over the part (1× as the game lays it; double-click: back to 1×)"><span>${tr('Pattern size')}</span><input type="range" class="pp-size" min="-3" max="3" step="0.1" value="0"><span class="val pp-size-val">1×</span></div>`;
+      <div class="pp-ar pp-size-row" hidden title="How big the pattern is laid over the part (1× as the game lays it; double-click: back to 1×)"><span>${tr('Size')}</span><input type="range" class="pp-size" min="-3" max="3" step="0.1" value="0"><span class="val pp-size-val">1×</span></div>`;
     this.q = (s) => el.querySelector(s);
     this.q('.pp-mats').innerHTML = MATERIALS.map(([c, n, f]) => `<button data-pick="material" data-color="${c}" data-finish="${f}" title="${tr('Material')}: ${tr(n)}"><i style="background:${c}"></i>${tr(n)}</button>`).join('');
     this.q('.pp-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) this.showTab(b.dataset.tab); });
@@ -188,14 +188,17 @@ export class PaintPicker {
   }
 
   // The catalog came (the game's files were read).
-  refresh() { this.renderGrid(); this.sync(); }
+  // (and the language changed: the search box's words too)
+  refresh() { if (this.tab) this.q('.pp-search').placeholder = this.searchWords(); this.renderGrid(); this.sync(); }
+
+  searchWords() { return this.tab === 'chameleon' ? tr('Search chameleon paints') : tr('Search patterns'); }
 
   showTab(tab) {
     this.tab = tab;
     this.el.querySelectorAll('.pp-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
     const search = this.q('.pp-search');
     search.hidden = tab === 'color';
-    search.placeholder = tab === 'chameleon' ? tr('Search chameleon paints') : tr('Search patterns');
+    search.placeholder = this.searchWords();
     this.q('.pp-mats').hidden = tab !== 'color';
     this.renderGrid();
     this.sync();

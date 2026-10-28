@@ -19,8 +19,6 @@
       <span class="dot" id="gameDot"></span><span id="gameLabel">Looking for Crossout…</span>
     </button>
     <span id="gameVer" class="ver-tag" hidden></span>
-    <button id="zhNamesBtn" class="ver-tag" title="Chinese part names (ui\names.zh.json)">Chinese names: off</button>
-    <button id="langBtn" class="ver-tag" title="Interface language / 界面语言">EN</button>
     <button id="reloadBtn" class="icon-btn" title="Re-read the game archives (after a game update)"><i class="gi" data-gi="icn_reload"></i></button>
     <div class="spacer"></div>
     <div class="mainmode" role="tablist" id="mainMode">
@@ -29,6 +27,13 @@
       <button role="tab" data-view="map" title="Fly through the game's maps, export them">Maps</button>
       <button id="donationsBtn" title="Support the development of Grimcold">Donations</button>
       <button id="bugReportBtn" title="Report a bug: the GitHub form, an anonymous technical report, the details to copy">Bug report</button>
+      <button id="langBtn" class="lang-btn" title="Interface language / 界面语言" aria-haspopup="menu" aria-expanded="false"><svg class="lang-globe" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.2"/><ellipse cx="8" cy="8" rx="2.8" ry="6.5" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M1.8 5.6h12.4M1.8 10.4h12.4" stroke="currentColor" stroke-width="1.1"/></svg><span id="langName" data-no-i18n>English</span></button>
+    </div>
+    <div id="langMenu" class="lang-menu" role="menu" hidden>
+      <div class="lang-head">Interface language</div>
+      <button role="menuitemradio" data-lang="en" data-no-i18n>English</button>
+      <button role="menuitemradio" data-lang="zh" data-no-i18n>简体中文</button>
+      <label class="chk" id="zhNamesWrap" hidden><input type="checkbox" id="zhNamesChk"> Chinese part names</label>
     </div>
     <div class="spacer"></div>
     <div class="winbtns" id="winBtns">

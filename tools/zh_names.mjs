@@ -6,13 +6,13 @@
 //   node tools\zh_names.mjs --app     -> every model the game has, through a running Grimcold
 //                                       (Parts with no English name either show up only this way)
 //
-// Writes ui\names.zh.todo.txt (UTF-8 with a BOM: Notepad and Excel read it right) and prints the count.
+// Writes build\zh\names.zh.todo.txt (UTF-8 with a BOM: Notepad and Excel read it right) and prints the count.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TODO = path.join(ROOT, 'ui', 'names.zh.todo.txt');
+const TODO = path.join(ROOT, 'build', 'zh', 'names.zh.todo.txt'); // (not in ui\: the release zip takes that folder whole)
 const asApp = process.argv.includes('--app');
 
 const readJson = (p, fallback) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return fallback; } };
@@ -83,6 +83,7 @@ for (const [d, list] of [...groups].sort((a, b) => a[0].localeCompare(b[0]))) {
 }
 if (!todo.length) lines.push('（没有待翻译的部件：全部都有中文名了。）', '');
 
+fs.mkdirSync(path.dirname(TODO), { recursive: true });
 fs.writeFileSync(TODO, '\uFEFF' + lines.join('\r\n'), 'utf8');
 
 // The title names.json gives a folder that holds several different parts (else empty).

@@ -10,14 +10,17 @@ build/
 /tools/stats/*.json
 # the screenshots' full-size originals (the README shows the JPEG copies)
 /screenshots/*.png
-# The translated name tables (parts, paints, maps, modes) are the game's own names and texts, gathered
-# from the reader's install by tools/zh_*.mjs: the game holds their copyright, as with tools/stats/*.json
-# above, so they stay out of the repository. Run the generator to make them again.
+# The Chinese name tables (parts, paints, maps, modes) hold the game's own Chinese names and texts:
+# tools/zh_maps.mjs and tools/zh_modes.mjs make the maps' and modes' from a localization table (CSV) the
+# reader supplies, matched against the folders and ids of their install; the parts' and paints' are
+# made by hand. The game holds their copyright, as with tools/stats/*.json above, so they stay out of
+# the repository, and tools/package.ps1 leaves them out of the release zip.
 /ui/names.zh.json
 /ui/paints.zh.json
 /ui/maps.zh.json
 /ui/modes.zh.json
-# The generators' reports (working notes: they quote the game's names too)
+# The generators' reports (working notes: they quote the game's names too) go to build\zh, ignored above;
+# older ones in ui\
 /ui/names.zh.*.txt
 /ui/paints.zh.txt
 /ui/maps.zh.txt

@@ -29,16 +29,20 @@ const PATTERNS = {
     [/^Autosave: (.+)$/, '自动保存：$1'],
     [/^Took (.+) from (.+)$/, '已从 $2 取下 $1'],
     [/^No paint on (.+)$/, '$1 上没有涂装'],
-    [/^(.+) \((.+)\) now uses (.+)$/, '$1（$2）现在使用 $3'],
+    [/^(.+) now uses (.+) \((\d+)×(\d+)\)$/, '$1 现在使用 $2（$3×$4）'],
     [/^(.+): (.+) triangles, (.+) mesh\(es?\)(.*)$/, '$1：$2 个三角形，$3 个网格$4'],
     [/^(.+) is open$/, '已打开 $1'],
     [/^Loading (.+)$/, '正在加载 $1'], // (地图/部件名跟着走：Loading 决斗之桥)
     [/^(.+) files, (.+)$/, '$1 个文件，$2'],
     [/^Could not restore the last build \((.+)\)\. (.+)$/, '无法恢复上次的载具（$1）。$2'],
     // the host (C++) reports these; the paths in them stay as they are
-    [/^No Crossout game data \(data\\\\\*\.index\) in (.+)$/, '$1 里没有 Crossout 游戏数据（data\\*.index）'],
-    [/^That is inside the Crossout game folder \((.+)\)$/, '这个位置在 Crossout 游戏文件夹里（$1）'],
+    [/^No Crossout game data \(data\\\*\.index\) in (.+)$/, '$1 里没有 Crossout 游戏数据（data\\*.index）'],
+    [/^That is inside the Crossout game folder \((.+)\), which is only ever read\. Please choose another folder\.$/, '这个位置在 Crossout 游戏文件夹里（$1），这里只会读取。请选择其他文件夹。'],
     [/^(.+) is still running\b(.*)$/, '$1 还在运行$2'],
+    // the builder's stickers and mirror copies (1.0.4)
+    [/^Sticker stuck on (.+) \(Ctrl\+Z takes it off\)$/, '已在 $1 上贴上贴纸（Ctrl+Z 撤销）'],
+    [/^(\d+) stickers? taken off \(Ctrl\+Z puts (?:it|them) back\)$/, '已移除 $1 张贴纸（Ctrl+Z 恢复）'],
+    [/^(\d+) stickers? on (.+) could not be shown .*$/, '$2 上有 $1 张贴纸无法显示（这个游戏版本的文件里没有）'],
   ],
 };
 
@@ -62,6 +66,13 @@ export function t(text, vars) {
 // For markup built in code: same lookup, but the caller says the line is HTML.
 export const th = (text, vars) => t(text, vars);
 
+// A line kept under a key of its own ('sticker pack:14feb'), with the English to show when the
+// language has none.
+export function tKey(key, english) {
+  const d = LANGS[lang];
+  return (d && d[key]) || english;
+}
+
 // A part's type, as stats.json names it ("Medium cabin", "Recharge booster"): its own namespace in the
 // dictionary ('type:...'), because some of those words mean something else elsewhere — Frame is also
 // the button that frames the model, Size is also the map's size.
@@ -73,9 +84,12 @@ export function typeLabel(type) {
 }
 
 // ---- the static chrome (index.html) --------------------------------------------------------------
-// The English of every text node and attribute touched, so that switching back restores it exactly.
+// The English of every text node and attribute touched, so that switching back restores it exactly;
+// and what the walk wrote there, so that a text or a tooltip the code changed since is told apart (it
+// is the code's own then: its English, or its line already in the language).
 const origText = new WeakMap();
-const origAttr = new WeakMap();
+const wroteText = new WeakMap();
+const origAttr = new WeakMap(); // el -> { title: { en, wrote }, ... }
 let origBlock = null; // selector -> its original innerHTML (only filled once a block was translated)
 
 const SKIP_TAGS = /^(SCRIPT|STYLE|TEXTAREA|NOSCRIPT|CODE|PRE)$/;
@@ -83,40 +97,76 @@ const ATTRS = ['title', 'placeholder', 'aria-label'];
 
 function norm(s) { return s.replace(/\s+/g, ' ').trim(); }
 
+// A line the code already wrote in a language (with t(), before a switch, and nothing drew it again)
+// back to its English: only lines in Chinese script that one English sentence alone translates to (no
+// templates, no namespaced keys like 'type:…'), so English on screen is never taken for one.
+const CJK = /[　-鿿＀-￯]/;
+let reverse = null;
+function englishOf(s) {
+  if (!CJK.test(s)) return undefined;
+  if (!reverse) {
+    reverse = new Map();
+    const twice = new Set();
+    for (const d of Object.values(LANGS)) {
+      if (!d) continue;
+      for (const [k, v] of Object.entries(d)) {
+        if (typeof v !== 'string' || v === k || k.includes('{') || /^[a-z][a-z ]*:/.test(k)) continue;
+        const t = norm(v);
+        if (reverse.has(t) && reverse.get(t) !== k) twice.add(t); else reverse.set(t, k);
+      }
+    }
+    for (const t of twice) reverse.delete(t);
+  }
+  return reverse.get(norm(s));
+}
+// (with the text's own spaces around it)
+const asEnglish = (v) => { const e = englishOf(v); return e == null ? v : v.match(/^\s*/)[0] + e + v.match(/\s*$/)[0]; };
+
+const textFilter = {
+  acceptNode(n) {
+    const p = n.parentNode;
+    if (!p || p.nodeType !== 1 || SKIP_TAGS.test(p.nodeName)) return NodeFilter.FILTER_REJECT;
+    if (p.closest('[data-no-i18n]')) return NodeFilter.FILTER_REJECT;
+    const v = n.nodeValue;
+    if (!v || !/\S/.test(v)) return NodeFilter.FILTER_REJECT;
+    return NodeFilter.FILTER_ACCEPT;
+  },
+};
+
 function translateText(root) {
   const doc = root.ownerDocument || document;
-  const w = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode(n) {
-      const p = n.parentNode;
-      if (!p || p.nodeType !== 1 || SKIP_TAGS.test(p.nodeName)) return NodeFilter.FILTER_REJECT;
-      if (p.closest('[data-no-i18n]')) return NodeFilter.FILTER_REJECT;
-      const v = n.nodeValue;
-      if (!v || !/\S/.test(v)) return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    },
-  });
+  const w = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, textFilter);
   const nodes = [];
   while (w.nextNode()) nodes.push(w.currentNode);
   for (const n of nodes) {
-    if (!origText.has(n)) origText.set(n, n.nodeValue);
+    if (!origText.has(n) || (n.nodeValue !== origText.get(n) && n.nodeValue !== wroteText.get(n))) origText.set(n, asEnglish(n.nodeValue));
     const en = origText.get(n);
     const key = norm(en);
     const zh = LANGS[lang]?.[key];
-    if (!zh) { if (n.nodeValue !== en) n.nodeValue = en; continue; } // (no line: English, as written)
+    if (!zh) { if (n.nodeValue !== en) n.nodeValue = en; wroteText.set(n, en); continue; } // (no line: English, as written)
     const lead = en.match(/^\s*/)[0], tail = en.match(/\s*$/)[0];
     n.nodeValue = lead + zh + tail;
+    wroteText.set(n, n.nodeValue);
   }
 }
 
 function restoreText(root) {
   const doc = root.ownerDocument || document;
-  const w = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const w = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, textFilter);
   while (w.nextNode()) {
     const n = w.currentNode;
     const en = origText.get(n);
-    if (en != null && n.nodeValue !== en) n.nodeValue = en;
+    if (en != null && n.nodeValue === en) continue;
+    if (en != null && n.nodeValue === wroteText.get(n)) { n.nodeValue = en; continue; }
+    // (one the code wrote or changed since: the code's, unless it is a line of the other language)
+    const e = asEnglish(n.nodeValue);
+    if (e !== n.nodeValue) { n.nodeValue = e; origText.set(n, e); wroteText.set(n, e); }
   }
 }
+
+// The English a static text node was written in, whatever the language on screen (the cards' fold
+// keys are kept under it).
+export const sourceText = (n) => (n ? origText.get(n) ?? n.nodeValue ?? '' : '');
 
 function translateAttrs(root) {
   for (const el of [root, ...root.querySelectorAll('*')]) {
@@ -126,11 +176,14 @@ function translateAttrs(root) {
       let saved = origAttr.get(el);
       const cur = el.getAttribute(a);
       if (!saved) { saved = {}; origAttr.set(el, saved); }
-      if (saved[a] == null) saved[a] = cur;
-      const en = saved[a];
-      const zh = LANGS[lang]?.[norm(en)];
-      const want = zh ? zh : en;
+      // (a tooltip the code set since the last walk, with the game's folder or the file's name in it:
+      // what it holds now is the one to translate, never the one first seen)
+      if (!saved[a] || (cur !== saved[a].en && cur !== saved[a].wrote)) saved[a] = { en: asEnglish(cur), wrote: cur };
+      const s = saved[a];
+      const zh = LANGS[lang]?.[norm(s.en)];
+      const want = zh ? zh : s.en;
       if (cur !== want) el.setAttribute(a, want);
+      s.wrote = want;
     }
   }
 }

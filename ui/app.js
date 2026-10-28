@@ -25,7 +25,7 @@ import { ShaderWarmup } from './warmup.js';
 import { PaintPicker, paintCatalog, normPaint, paintForFile, paintLabel, thumbOf } from './paints.js';
 // (i18n: the interface's translations. t is imported as tr, so a local `t` (a timer, a count) in this
 // file keeps meaning what it did)
-import { t as tr, tLines as trLines, applyStatic, setLang, pickLang, getLang, LANG_NAMES } from './i18n.js';
+import { t as tr, tLines as trLines, tKey, applyStatic, sourceText, setLang, pickLang, getLang, LANG_NAMES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const DATA = 'https://xo.data';
@@ -172,15 +172,16 @@ function countSubs() {
 }
 
 // ---- small helpers ----------------------------------------------------------------------------
-let statusTimer = 0;
+let statusTimer = 0, lastStatus = null; // (the line as it came in: a language switch writes it again)
 function status(text, error = false, sticky = false) {
+  lastStatus = text ? { text, error, sticky } : null;
   text = text ? tr(text) : ''; // (the dictionary holds the whole sentence: one place to translate them all)
   const el = $('statusText');
   el.textContent = text || '';
   el.title = text || '';
   el.classList.toggle('err', !!error);
   clearTimeout(statusTimer);
-  if (text && !sticky && !error) statusTimer = setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 8000);
+  if (text && !sticky && !error) statusTimer = setTimeout(() => { if (el.textContent === text) { el.textContent = ''; lastStatus = null; } }, 8000);
 }
 let busyCount = 0, loadCount = 0, loadShown = false, loadTimer = 0;
 const showBusy = () => { $('busy').hidden = busyCount === 0 && !loadShown; };
@@ -373,6 +374,7 @@ call('window', { op: 'state' }).then((r) => document.documentElement.classList.t
 
 // ---- game data --------------------------------------------------------------------------------
 function showGame(g) {
+  state.lastGame = g; // (a language switch writes it all again)
   state.gameVer = g.gameVersion || ''; // (the cards' pictures are kept per game version)
   $('gameDot').className = 'dot ' + (g.ok ? 'ok' : 'err');
   // (the folder's name alone: its full path holds the Windows user's name, so it is only in the tooltip
@@ -603,16 +605,10 @@ function setPartName(path, name) {
   renderBuildPanel();
 }
 
-// The Chinese part names on or off (the button in the top bar). Kept in the settings, like the rest.
+// The Chinese part names on or off (the Language menu, when ui\\names.zh.json is there). Kept in the settings.
 function syncZhBtn() {
-  const b = $('zhNamesBtn'), on = wantZh();
-  b.textContent = on ? tr('Chinese names: on') : tr('Chinese names: off');
-  b.disabled = !names.zh;
-  b.title = names.zh
-    ? [on ? tr('Chinese part names: on') : tr('Chinese part names: off'),
-       tr('The names come from ui\\names.zh.json; a part it does not list keeps its English name.'),
-       tr('Click to switch.')].join('\n')
-    : tr('No ui\\names.zh.json: drop one in and the parts get Chinese names.');
+  $('zhNamesWrap').hidden = !names.zh;
+  $('zhNamesChk').checked = wantZh();
 }
 function setZhNames(on) {
   state.settings.zhNames = !!on;
@@ -629,17 +625,36 @@ function setZhNames(on) {
   buildPicker.refresh();
 }
 
-// ---- 界面语言 (the language button in the top bar) -----------------------------------------------
+// ---- 界面语言: the Language button beside Bug report and its menu -------------------------------
 function syncLangBtn() {
-  const b = $('langBtn');
-  b.textContent = getLang() === 'zh' ? '中文' : 'EN';
-  b.title = [tr('Interface language: {name}', { name: LANG_NAMES[getLang()] }),
-             ...(getLang() === 'en' ? [] : [`Interface language: ${LANG_NAMES[getLang()]}`]),
-             tr('Click to switch.')].join('\n');
+  $('langName').textContent = getLang() === 'zh' ? '简体中文' : LANG_NAMES[getLang()];
+  for (const b of $('langMenu').querySelectorAll('[data-lang]')) {
+    b.classList.toggle('on', b.dataset.lang === getLang());
+    b.setAttribute('aria-checked', String(b.dataset.lang === getLang()));
+  }
+}
+function showLangMenu(on) {
+  const m = $('langMenu');
+  if (on) {
+    const r = $('langBtn').getBoundingClientRect();
+    m.hidden = false;
+    m.style.top = `${Math.round(r.bottom + 4)}px`;
+    m.style.left = `${Math.round(Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8)))}px`;
+    syncLangBtn();
+    syncZhBtn();
+    m.querySelector('button.on[data-lang]')?.focus(); // (the keyboard starts on the language in use)
+  } else {
+    const back = m.contains(document.activeElement); // (chosen or closed from inside: back to the button)
+    m.hidden = true;
+    if (back) $('langBtn').focus();
+  }
+  $('langBtn').classList.toggle('on', on);
+  $('langBtn').setAttribute('aria-expanded', String(!!on));
 }
 // Switches the whole interface: the static chrome (i18n's walk over index.html), then everything the
 // code builds (the parts list, the inspector, the build panel) is drawn again through t().
 function setUiLang(l) {
+  const last = lastStatus; // (before anything below writes a line of its own)
   state.settings.uiLang = setLang(l);
   call('setSettings', { uiLang: state.settings.uiLang }).catch(() => {});
   applyStatic(document.body, hydrateIcons);
@@ -648,6 +663,25 @@ function setUiLang(l) {
   rebuildRows();
   if (state.info) renderInspector();
   renderBuildPanel();
+  syncSaveState(); // (the file line under the build's name)
+  renderGarage(); // (the energy bar and the stats: drawn in code)
+  viewPicker.refresh(); // (the paint pickers too: switching back left "无涂装" in English)
+  buildPicker.refresh();
+  // the rest the code wrote in words: the game's tooltips, the search box, the 3D Viewer's LOD menu and
+  // gun card, the checklist, the sticker packs, the maps' list, panel and keys, the status line
+  if (state.lastGame) showGame(state.lastGame);
+  syncSearchPlaceholder();
+  if (state.info) { renderViewTools(); renderAnimCard(); }
+  renderChecklist();
+  if (stickerPackList) fillStickers();
+  if ($('mapList').innerHTML) renderMapList(); // (once it was drawn: before, it says what it waits for)
+  $('mapKeys').innerHTML = '';
+  if (mapView.scene) renderMapSpeed();
+  renderMapPanel();
+  // (a line given in English comes again in the new language; one the code had already put into the old
+  // language goes, unless it is an error or one that stays)
+  if (last && (last.error || last.sticky || !/[\u3000-\u9fff]/.test(last.text))) status(last.text, last.error, last.sticky);
+  else status('');
   syncMapView?.();
 }
 
@@ -1080,10 +1114,13 @@ document.querySelector('.modes').addEventListener('click', (e) => {
   state.mode = b.dataset.mode;
   document.querySelectorAll('.modes button').forEach((x) => x.classList.toggle('on', x === b));
   syncLeft(); // (parts: the menu and the cards; all files: the files alone)
-  $('search').placeholder = state.mode === 'files' ? 'Filter all files (Ctrl+F)' : 'Search parts (Ctrl+F)';
+  syncSearchPlaceholder();
   $('listWrap').scrollTop = 0;
   rebuildRows();
 });
+function syncSearchPlaceholder() {
+  $('search').placeholder = state.mode === 'files' ? tr('Filter all files (Ctrl+F)') : tr('Search parts (Ctrl+F)');
+}
 
 let searchTimer = 0;
 $('search').addEventListener('input', () => {
@@ -1324,7 +1361,7 @@ function renderAnimCard() {
   $('heatSlider').value = Math.round(state.heatUser * 100);
   $('heatVal').textContent = `${Math.round(state.heatUser * 100)}%`;
   renderFxRow(a);
-  syncTarget();
+  if (state.view === 'part') syncTarget(); // (the builder's target is firing.js's: setView('part') syncs this one on the way back)
   if (!a) return;
   const acts = a.activities();
   const dup = (act) => acts.filter((x) => x.activity === act).length > 1;
@@ -1522,7 +1559,7 @@ viewer.frameHooks.push(() => {
 
 function renderViewTools() {
   const info = state.info;
-  $('lodSel').innerHTML = Array.from({ length: info.lodCount }, (_, i) => `<option value="${i}" ${i === state.lod ? 'selected' : ''}>${i === 0 ? tr('{n} (best)', { n: i }) : i === info.lodCount - 1 && info.lodCount > 1 ? tr('{n} (lowest)', { n: i }) : i}</option>`).join('');
+  $('lodSel').innerHTML = Array.from({ length: info.lodCount }, (_, i) => `<option value="${i}" ${i === state.lod ? 'selected' : ''}>${i === 0 ? tr('{n} (best)', { n: i }) : i}</option>`).join('');
   const skins = info.skins.filter((s) => s.exists).map((s) => s.name);
   // (skins without a "default" entry: the look on screen is a choice too, or the menu showed the
   // first skin while the own look was on, and there was no way back to it)
@@ -2099,7 +2136,9 @@ function restorePrefs(saved) {
 
 // Cards fold to their header: a click on a card's own header (its first line, not a button in it) folds
 // it, another opens it; the folded ones are kept with the prefs ("folded": "panel/card" keys).
-const cardKey = (card) => `${card.closest('.inspector')?.id || ''}/${card.id || card.firstElementChild.id || card.firstElementChild.firstChild?.textContent.trim() || ''}`;
+// (a header's English, whatever the language: a card folded in one stays folded in the other)
+const headText = (h) => { const f = h.firstChild; return (f?.nodeType === 3 ? sourceText(f) : f?.textContent || '').trim(); };
+const cardKey = (card) => `${card.closest('.inspector')?.id || ''}/${card.id || card.firstElementChild.id || headText(card.firstElementChild) || ''}`;
 document.addEventListener('click', (e) => {
   const h = e.target.closest('.inspector .card > h3:first-child');
   if (!h || e.target.closest('button, input, select, a, label')) return;
@@ -2208,8 +2247,8 @@ function renderBuildPanel() {
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const comps = st.parts ? build.components({ all: true }) : []; // (parts on the cursor where they were)
   const cabin = build.instances.some((i) => build.isCabin(i.path));
-  $('bGroups').innerHTML = !st.parts ? '' : comps.length === 1 ? '<span class="ok"><i class="gi" data-gi="ui/icn_check"></i>Every part is attached to the rest</span>'
-    : `<span class="warn"><i class="gi" data-gi="icn_attention"></i>${comps.length} separate groups: ${build.loose.size} part(s) ${cabin ? "aren't welded to the cabin" : "don't touch the main body at a connection point"}</span>`;
+  $('bGroups').innerHTML = !st.parts ? '' : comps.length === 1 ? `<span class="ok"><i class="gi" data-gi="ui/icn_check"></i>${tr('Every part is attached to the rest')}</span>`
+    : `<span class="warn"><i class="gi" data-gi="icn_attention"></i>${tr(cabin ? "{n} separate groups: {m} part(s) aren't welded to the cabin" : "{n} separate groups: {m} part(s) don't touch the main body at a connection point", { n: comps.length, m: build.loose.size })}</span>`;
   hydrateIcons($('bGroups'));
   $('bUndo').disabled = build.history.length < 2 && !build.placing;
   $('bRedo').disabled = !build.future.length;
@@ -2241,7 +2280,7 @@ function renderBuildPanel() {
     $('bSt').checked = inst.st;
     const stickers = sel.reduce((k, i) => k + (i.stickers?.length || 0), 0);
     $('bStickerRow').hidden = !stickers;
-    $('bStickerCount').textContent = `${stickers} sticker${stickers === 1 ? '' : 's'}`;
+    $('bStickerCount').textContent = stickers === 1 ? tr('1 sticker') : tr('{n} stickers', { n: stickers });
     const twins = build.selectionTwins().length;
     $('bTwinHint').hidden = !twins;
     $('bTwinHint').textContent = many
@@ -2405,10 +2444,12 @@ function renderPartCard() {
   const el = $('partCard');
   const p = build.placing && !build.placing.group ? build.placing : build.hovered || build.get(build.selected);
   if (!p || state.view !== 'build' || !$('partsList').hidden) { el.hidden = true; return; }
-  const key = `${p.path}|${!!p.st}|${names.gen}`;
-  if (el.dataset.key !== key) {
+  // (data-card, not data-key: hydrateIcons takes every [data-key] for a key cap, and a language switch
+  // runs it over the whole page)
+  const key = `${p.path}|${!!p.st}|${names.gen}|${getLang()}`;
+  if (el.dataset.card !== key) {
     el.innerHTML = partCardHtml(nameOrFile(p.path) + (p.st && partStats.hasSteering(p.path) ? ' ST' : ''), p.path, partStats.item(p.path, p.st), { st: p.st && partStats.hasSteering(p.path) });
-    el.dataset.key = key;
+    el.dataset.card = key;
     hydrateIcons(el);
   }
   el.hidden = false;
@@ -2643,10 +2684,10 @@ $('bStickerClear').addEventListener('click', () => build.clearStickers());
 // ---- stickers (stickers.js): the game's, stuck on the builder's vehicle -------------------------------
 let stickerPackList = null; // pack -> bases (from the game's file list)
 function fillStickers() {
-  if (!stickerPackList || stickerPackList.files !== state.files) {
-    stickerPackList = { files: state.files, packs: stickerPacks(state.files) };
+  if (!stickerPackList || stickerPackList.files !== state.files || stickerPackList.lang !== getLang()) {
+    stickerPackList = { files: state.files, packs: stickerPacks(state.files), lang: getLang() };
     const sel = $('bStickerPack'), keep = state.settings.stickerPack;
-    sel.innerHTML = [...stickerPackList.packs.keys()].map((p) => `<option value="${p}">${packLabel(p)} (${stickerPackList.packs.get(p).length})</option>`).join('');
+    sel.innerHTML = [...stickerPackList.packs.keys()].map((p) => `<option value="${p}">${esc(tKey('sticker pack:' + p, packLabel(p)))} (${stickerPackList.packs.get(p).length})</option>`).join('');
     if (keep && stickerPackList.packs.has(keep)) sel.value = keep;
     $('bStickerCard').hidden = !stickerPackList.packs.size;
   }
@@ -2841,9 +2882,9 @@ function buildDirty() {
 function syncSaveState() {
   const dirty = buildDirty(), path = state.buildFile.path, name = path ? path.split(/[\\/]/).pop() : '';
   $('bQuickSave').classList.toggle('dirty', dirty);
-  $('bQuickSave').title = `${path ? `Save to ${path}` : 'Save the build to a file'} (Ctrl+S)${dirty ? ' · it has unsaved changes' : ''}`;
-  $('bFile').textContent = path ? `${name} · ${dirty ? 'unsaved changes' : 'saved'}` : dirty ? 'Not saved to a file yet' : '';
-  $('bFile').title = path ? `${path}${dirty ? '\nThe build has changes the file does not have yet: Save (Ctrl+S)' : ''}` : '';
+  $('bQuickSave').title = `${path ? tr('Save to {path}', { path }) : tr('Save the build to a file')} (Ctrl+S)${dirty ? tr(' · it has unsaved changes') : ''}`;
+  $('bFile').textContent = path ? `${name} · ${dirty ? tr('unsaved changes') : tr('saved')}` : dirty ? tr('Not saved to a file yet') : '';
+  $('bFile').title = path ? `${path}${dirty ? '\n' + tr('The build has changes the file does not have yet: Save (Ctrl+S)') : ''}` : '';
   $('bFile').classList.toggle('unsaved', dirty);
 }
 async function saveBuild({ as = false, outPath } = {}) { // (outPath: the tests' answer to the dialog)
@@ -2905,7 +2946,7 @@ async function loadBuildFile(data, from = '', { quiet = false } = {}) {
     missing.push(...missingRefs);
     const problems = [...failed.map((f) => `${f.part.path}: ${f.error}`), ...missing.map((m) => 'missing image ' + m)];
     if (problems.length) status(`${failed.length ? `${failed.length} part${failed.length > 1 ? 's' : ''} could not be loaded (kept in the build file)` : 'Build loaded'}${missing.length ? `, ${missing.length} image${missing.length > 1 ? 's' : ''} missing` : ''}: ${problems.slice(0, 3).join('; ')}`, true, true);
-    else if (!quiet) status(`Build loaded${from ? ': ' + from : ''} (${build.instances.length} parts)`);
+    else if (!quiet) status(from ? tr('Build loaded: {from} ({n} parts)', { from, n: build.instances.length }) : tr('Build loaded ({n} parts)', { n: build.instances.length }));
     return failed;
   } finally {
     if (held !== null && held === build.loadGen) build.loadingNow = false; // (not a newer load's)
@@ -3117,7 +3158,7 @@ function renderMapPanel() {
     if (L.decals) parts.push(tr('decals'));
     const parts5 = ['terrain', 'ground', 'sky', 'grass', 'decals'].filter((k) => !L[k]).length;
     $('mpLoad').querySelector('.progress div').style.width = `${Math.round((L.done + parts5) / (L.models + 5) * 100)}%`;
-    $('mpLoad').querySelector('span').textContent = parts.length ? tr('Loading {what}…', { what: parts.join('、') }) : tr('Loading…');
+    $('mpLoad').querySelector('span').textContent = parts.length ? tr('Loading {what}…', { what: parts.join(tr(', ')) }) : tr('Loading…');
   }
   $('mpErrors').innerHTML = L?.errors?.length ? tr('{n} problem(s) while loading: {first}', { n: L.errors.length, first: esc(L.errors[0]) }) : '';
   const opt = (v, label, sel) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(label)}</option>`;
@@ -3153,6 +3194,7 @@ const drawnText = () => `${mapView.drawn.placements.toLocaleString()} · ${tr('{
 const grassText = () => (mapView.drawn.grass || 0).toLocaleString();
 
 function renderMapSpeed() {
+  if (!$('mapKeys').innerHTML) { $('mapKeys').innerHTML = keysHtml(MAP_CONTROLS); hydrateIcons($('mapKeys')); } // (a language switch empties it: driving too)
   const sp = drive.speedo;
   if (sp) { // (driving: a speedometer)
     const f = Math.min(1, sp.kmh / Math.max(1, sp.top));
@@ -3166,7 +3208,6 @@ function renderMapSpeed() {
   $('mapSpeed').innerHTML = `<div class="ms-bars">${SPEEDS.map((_, i) => `<i class="${i <= l ? 'on' : ''}" style="height:${6 + i * 2}px"></i>`).join('')}</div>` +
     `<b>${v} <small>m/s</small></b><span>${Math.round(v * 3.6)} km/h · ${tr('speed {n} of {max}', { n: l + 1, max: SPEEDS.length })}</span>` +
     `<span class="ms-keys"><i><kbd>W A S D</kbd> ${tr('fly')}</i> · <i><kbd>Space</kbd> ${tr('up')}</i> · <i><kbd>Shift</kbd> ${tr('down')}</i> · <i><kbd>1–9</kbd> ${tr('speed')}</i> · <i>${tr('drag to look')}</i> · <i>${tr('click to select')}</i></span>`; // (small windows: instead of the key bar)
-  if (!$('mapKeys').innerHTML) { $('mapKeys').innerHTML = keysHtml(MAP_CONTROLS); hydrateIcons($('mapKeys')); }
 }
 
 // the numbers that change while flying: a few times a second
@@ -3409,14 +3450,39 @@ async function gameCommand(cmd, text) {
 $('gameBtn').addEventListener('click', () => gameCommand('pickGameDir', 'Reading the game archives…'));
 $('gameDialogPick').addEventListener('click', () => gameCommand('pickGameDir', 'Reading the game archives…'));
 $('reloadBtn').addEventListener('click', () => gameCommand('reload', 'Re-reading the game archives…'));
-$('zhNamesBtn').addEventListener('click', async () => {
+$('zhNamesChk').addEventListener('change', async () => {
+  const on = $('zhNamesChk').checked;
   await loadZhNames(); // (the file may have just been edited: read it again, then switch)
   await loadPaintZh();
   await loadMapZh();
   await loadModesZh();
-  setZhNames(!state.settings.zhNames);
+  setZhNames(on);
 });
-$('langBtn').addEventListener('click', () => setUiLang(getLang() === 'zh' ? 'en' : 'zh'));
+$('langBtn').addEventListener('click', (e) => { e.stopPropagation(); showLangMenu($('langMenu').hidden); });
+$('langMenu').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const b = e.target.closest('button[data-lang]');
+  if (!b) return;
+  if (b.dataset.lang !== getLang()) setUiLang(b.dataset.lang);
+  showLangMenu(false);
+});
+document.addEventListener('click', () => { if (!$('langMenu').hidden) showLangMenu(false); });
+// (while it is open the keys are the menu's: the app's up / down would open another part behind it)
+document.addEventListener('keydown', (e) => {
+  const m = $('langMenu');
+  if (m.hidden) return;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); showLangMenu(false); return; }
+  if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+    e.preventDefault();
+    e.stopPropagation();
+    const items = [...m.querySelectorAll('button[data-lang], #zhNamesChk')].filter((x) => x.getClientRects().length);
+    const at = items.indexOf(document.activeElement), last = items.length - 1;
+    const to = e.key === 'Home' ? 0 : e.key === 'End' ? last : at < 0 ? (e.key === 'ArrowDown' ? 0 : last) : (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[to]?.focus();
+  } else if (e.key === 'Tab') showLangMenu(false);
+  else if (m.contains(document.activeElement) && e.key !== 'Enter' && e.key !== ' ') e.stopPropagation(); // (letters: not the app's shortcuts)
+}, true);
+window.addEventListener('resize', () => { if (!$('langMenu').hidden) showLangMenu(false); });
 
 // ---- keyboard ----
 // The next openable row from row i in direction dir: { i, path } or null.

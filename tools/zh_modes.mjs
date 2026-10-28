@@ -19,7 +19,7 @@ import { eachPack, readEntry, dataDirOf, gameDirFromSettings } from './xo_data.m
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_JSON = path.join(ROOT, 'ui', 'modes.zh.json');
-const OUT_TXT = path.join(ROOT, 'ui', 'modes.zh.txt');
+const OUT_TXT = path.join(ROOT, 'build', 'zh', 'modes.zh.txt'); // (报告不放 ui\：发布包会整个带上 ui 文件夹)
 
 // 查到了同名键、但内容不是这个模式的名字：不采信（说明写在报告里）
 const EXCLUDE = {
@@ -151,7 +151,7 @@ for (const f of scan.fests) {
 
 const doc = {
   _note: '游戏模式中文名（由官方简体中文文本表的 GAMEPLAY_* / Mission_*_Name 生成，键 = 场景里的 GameplaysList / FestivalsList 标识）。'
-    + '没有条目的照样显示英文。重生成：node tools/zh_modes.mjs <本地化键全量表.csv>。逐条来源见 ui/modes.zh.txt。',
+    + '没有条目的照样显示英文。重生成：node tools/zh_modes.mjs <本地化键全量表.csv>。逐条来源见 build/zh/modes.zh.txt。',
   gameplays: modes,
   sources: modeSrc,
   festivals,
@@ -161,7 +161,7 @@ fs.writeFileSync(OUT_JSON, JSON.stringify(doc, null, 2) + '\n', 'utf8');
 const L = [];
 L.push('游戏模式中文名对照表  （生成：node tools/zh_modes.mjs）');
 L.push('');
-L.push(`游戏：${dataDir}   档案包 ${scan.stat.packs} 个，条目 ${scan.stat.entries} 个，读不出 ${scan.stat.bad} 个`);
+L.push(`游戏：${path.basename(path.dirname(dataDir)) || path.basename(dataDir)}   档案包 ${scan.stat.packs} 个，条目 ${scan.stat.entries} 个，读不出 ${scan.stat.bad} 个`);
 L.push(`模式标识 ${scan.games.length} 个：官方键对上 ${Object.keys(modes).length} 个，无名字 ${noName.length} 个，查过但不采信 ${excluded.length} 个`);
 L.push(`节日标识 ${scan.fests.length} 个：官方表里没有节日名键，保持英文（Empty 显示为「无」）`);
 L.push('');
@@ -185,6 +185,7 @@ L.push(excluded.length ? excluded.map((e) => `  ${e.id}\t${e.why}\t${e.keys.join
 L.push('');
 L.push('== 节日标识 ==');
 L.push(scan.fests.map((f) => '  ' + f).join('\n'));
+fs.mkdirSync(path.dirname(OUT_TXT), { recursive: true });
 fs.writeFileSync(OUT_TXT, L.join('\n') + '\n', 'utf8');
 
 console.log(`模式 ${scan.games.length} 个 → 写入 ${Object.keys(modes).length} 条，留英文 ${noName.length}，不采信 ${excluded.length}`);

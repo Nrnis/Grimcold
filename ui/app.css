@@ -591,7 +591,13 @@ code { font: 12px Consolas, monospace; background: #0e0f12; padding: 1px 4px; bo
 .mp-hidden { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -2px 0 10px; font-size: 12px; color: var(--warn); }
 .map-box { position: absolute; border: 1px solid #ffa43c; background: rgba(255, 164, 60, .12); pointer-events: none; z-index: 5; }
 
-/* the Chinese part names, on or off (the tag in the top bar, next to the game's version) */
-#zhNamesBtn { cursor: pointer; font-size: 12.5px; line-height: 1.4; transition: background .12s; }
-#zhNamesBtn:hover:not(:disabled) { background: rgba(255, 102, 0, .3); }
-#zhNamesBtn:disabled { opacity: .45; cursor: default; }
+/* the Language button (beside Bug report) and its menu: the interface's language, the Chinese part names */
+.mainmode .lang-btn { display: inline-flex; align-items: center; gap: 6px; min-width: 0; } /* (as wide as its words: not a whole tab) */
+.lang-globe { width: 15px; height: 15px; flex: none; opacity: .85; }
+.lang-menu { position: fixed; z-index: 60; min-width: 190px; padding: 6px; background: #12161b; border: 1px solid #3a4452; box-shadow: 0 8px 24px rgba(0, 0, 0, .55); display: flex; flex-direction: column; gap: 2px; }
+.lang-menu[hidden] { display: none; }
+.lang-menu .lang-head { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); padding: 4px 8px 6px; }
+.lang-menu button { text-align: left; background: none; border: 0; color: var(--text); padding: 7px 10px 7px 26px; position: relative; cursor: pointer; font: inherit; }
+.lang-menu button:hover { background: rgba(255, 102, 0, .18); }
+.lang-menu button.on::before { content: ''; position: absolute; left: 10px; top: 50%; width: 7px; height: 7px; margin-top: -4px; background: #ff9013; transform: rotate(45deg); }
+.lang-menu .chk { margin: 6px 4px 2px; padding-top: 8px; border-top: 1px solid #2a323c; font-size: 12.5px; }

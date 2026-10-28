@@ -1,5 +1,5 @@
 // 地图中文名的生成器：把「游戏里真实存在的地图文件夹」与官方本地化表里的 MAP_TITLE_* 对上，
-// 写出 ui/maps.zh.json（界面在运行时叠加，英文原文一个字不改）和 ui/maps.zh.txt（逐条来源）。
+// 写出 ui/maps.zh.json（界面在运行时叠加，英文原文一个字不改）和 build/zh/maps.zh.txt（逐条来源）。
 //
 // 用法：
 //   node tools/zh_maps.mjs <本地化键全量表.csv> [游戏目录]
@@ -16,7 +16,7 @@ import { eachPack, dataDirOf, gameDirFromSettings } from './xo_data.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_JSON = path.join(ROOT, 'ui', 'maps.zh.json');
-const OUT_TXT = path.join(ROOT, 'ui', 'maps.zh.txt');
+const OUT_TXT = path.join(ROOT, 'build', 'zh', 'maps.zh.txt'); // (报告不放 ui\：发布包会整个带上 ui 文件夹)
 
 // 游戏里没有正式名字的技术场景（非官方名，描述性翻译；不想要就删掉那几行）
 const MANUAL = {
@@ -115,7 +115,7 @@ for (const name of scan.maps) {
 const doc = {
   _note: '地图中文名（由官方简体中文文本表的 MAP_TITLE_* 生成，键 = levels/maps 下的文件夹名）。'
     + '没有条目的地图像素保持英文名；技术场景（主菜单/大厅等）是描述性译名，已在 sources 里标明。'
-    + '重生成：node tools/zh_maps.mjs <本地化键全量表.csv>。逐条来源见 ui/maps.zh.txt。',
+    + '重生成：node tools/zh_maps.mjs <本地化键全量表.csv>。逐条来源见 build/zh/maps.zh.txt。',
   maps,
   sources,
 };
@@ -126,7 +126,7 @@ const lines = [];
 const nManual = Object.keys(maps).filter((m) => sources[m] === MANUAL_NOTE).length;
 lines.push('地图中文名对照表  （生成：node tools/zh_maps.mjs）');
 lines.push('');
-lines.push(`游戏：${dataDir}   档案包 ${scan.stat.packs} 个，读入 ${scan.stat.entries} 个文件条目，损坏 ${scan.stat.bad} 个`);
+lines.push(`游戏：${path.basename(path.dirname(dataDir)) || path.basename(dataDir)}   档案包 ${scan.stat.packs} 个，读入 ${scan.stat.entries} 个文件条目，损坏 ${scan.stat.bad} 个`);
 lines.push(`地图文件夹 ${scan.maps.length} 个：官方键对上 ${Object.keys(maps).length - nManual} 个，技术场景 ${nManual} 个，留空 ${miss.length} 个`);
 lines.push('');
 lines.push('规则：文件夹名的全大写 = 本地化键的后缀（levels/maps/bridge → MAP_TITLE_BRIDGE）；');
@@ -144,6 +144,7 @@ lines.push('');
 const unused = [...titles.values()].filter((t) => !used.has(t.key.toUpperCase()));
 lines.push('== 表里有键、但本机游戏里没有这个文件夹（没写进表）==');
 for (const t of unused) lines.push(`  ${t.key}\t${t.cn}\t${t.en}`);
+fs.mkdirSync(path.dirname(OUT_TXT), { recursive: true });
 fs.writeFileSync(OUT_TXT, lines.join('\n') + '\n', 'utf8');
 
 console.log(`地图 ${scan.maps.length} 个 → 写入 ${Object.keys(maps).length} 条（技术场景 ${nManual}），留空 ${miss.length}，未用键 ${unused.length}`);

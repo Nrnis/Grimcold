@@ -25,6 +25,7 @@ import { physShapes, placeHulls, boxHull, partsOverlap } from './phys.js';
 import { WheelMarks, isWheel } from './wheelmarks.js';
 import { normPaint, paintForFile, DEFAULT_COLOR } from './paints.js';
 import { stickerMesh, stickerTexture, disposeSticker, stickerAt, stickerExport, surfaceMeshes } from './stickers.js';
+import { t as tr } from './i18n.js';
 
 // A sticker record as a file or the undo history holds it (stickers.js stickerAt).
 const vec3 = (a) => Array.isArray(a) && a.length === 3 && a.every(Number.isFinite);
@@ -957,10 +958,11 @@ export class Build {
       this.setSelection(made.map((i) => i.id));
       this.commit();
     }
-    const one = (n, a, b) => `${n} ${n === 1 ? a : b}`;
-    const left = [skip.there && one(skip.there, 'has its copy there already', 'have their copies there already'), skip.plane && one(skip.plane, 'lies on the mirror plane', 'lie on the mirror plane'),
-      skip.one && `${skip.one} can't have a second (one cabin, one engine)`, skip.overlap && one(skip.overlap, 'would overlap a part', 'would overlap parts')].filter(Boolean);
-    this.status(`${made.length ? `Mirrored ${made.length} part${made.length > 1 ? 's' : ''} to the other side` : 'Nothing mirrored'}${left.length ? ` (${left.join(', ')})` : ''}`);
+    const one = (n, a, b) => tr(n === 1 ? a : b, { n });
+    const left = [skip.there && one(skip.there, '{n} has its copy there already', '{n} have their copies there already'), skip.plane && one(skip.plane, '{n} lies on the mirror plane', '{n} lie on the mirror plane'),
+      skip.one && tr("{n} can't have a second (one cabin, one engine)", { n: skip.one }), skip.overlap && one(skip.overlap, '{n} would overlap a part', '{n} would overlap parts')].filter(Boolean);
+    const head = made.length ? one(made.length, 'Mirrored {n} part to the other side', 'Mirrored {n} parts to the other side') : tr('Nothing mirrored');
+    this.status(`${head}${left.length ? tr(' ({list})', { list: left.join(tr(', ')) }) : ''}`);
     this.onChange();
   }
 

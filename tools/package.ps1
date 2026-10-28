@@ -13,6 +13,12 @@ if (Test-Path $out) { Remove-Item -Recurse -Force $out }
 New-Item -ItemType Directory -Force $out | Out-Null
 Copy-Item "$root\Grimcold.exe", "$root\libzstd.dll" $out
 Copy-Item -Recurse "$root\ui" (Join-Path $out 'ui')
+# (the local Chinese name tables and their reports hold the game's own texts: never in a release, see
+# .gitignore)
+Get-ChildItem (Join-Path $out 'ui') -File | Where-Object { $_.Name -match '^(names|paints|maps|modes)\.zh(\.[^.]+)?\.(json|txt)$' } | ForEach-Object {
+  Write-Host "[package] left out ui\$($_.Name) (the game's own texts)"
+  Remove-Item -Force $_.FullName
+}
 foreach ($f in 'README.md', 'MANUAL.md', 'LICENSE', 'NOTICE.md', 'THIRD_PARTY_NOTICES.md', 'PRIVACY.md', 'KNOWN_ISSUES.md', 'SECURITY.md', 'CODE_OF_CONDUCT.md') { Copy-Item "$root\$f" $out }
 Copy-Item "$root\third_party\webview2\NOTICE.txt" (Join-Path $out 'WebView2-NOTICE.txt')
 $zip = Join-Path $root "dist\$name.zip"

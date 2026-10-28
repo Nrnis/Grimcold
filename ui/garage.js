@@ -204,14 +204,20 @@ export function vehicleStatsHtml(v, { limits = true } = {}) {
     v.overloaded ? 'Slower in practice: the vehicle is heavier than its tonnage' : 'Without overload'));
   if (v.tonnage != null) {
     const f = Math.min(1, v.mass / v.tonnage), over = v.overloaded;
-    out.push(`<div class="vs-row vs-bar${over ? ' warn' : ''}" title="${esc(`Mass ${fmt(v.mass)} kg of ${fmt(v.tonnage)} kg tonnage${over ? ': overloaded, the vehicle loses speed and acceleration' : ''}`)}">${gi('payload')}<div><b>Tonnage</b>
-      <span class="bar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><span>${fmt(v.mass)} / ${fmt(v.tonnage)} kg${over ? ' · overloaded' : ''}</span></div></div>`);
+    out.push(`<div class="vs-row vs-bar${over ? ' warn' : ''}" title="${esc(`Mass ${fmt(v.mass)} kg of ${fmt(v.tonnage)} kg tonnage${over ? ': overloaded, the vehicle loses speed and acceleration' : ''}`)}">${gi('payload')}<div><b>${esc(tr('Tonnage'))}</b>
+      <span class="bar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><span>${fmt(v.mass)} / ${fmt(v.tonnage)} kg${over ? ' · ' + esc(tr('overloaded')) : ''}</span></div></div>`);
   }
   const notes = [];
-  if (!v.cabin && v.parts) notes.push('No cabin: the energy, tonnage and speed come from the cabin.');
-  if (v.cabins.length > 1) notes.push(`${v.cabins.length} cabins: ${limits ? 'a vehicle has one; ' : ''}the first one counts.`);
-  if (v.engines > 1) notes.push(`${v.engines} engines: ${limits ? 'a vehicle has one; ' : ''}the first one counts.`);
-  if (v.unknown) notes.push(`No stats yet for ${v.unknown} part${v.unknown > 1 ? 's' : ''} (${v.unknownArmour ? 'armour and other parts' : 'parts'} this tool has no in-game name for): the mass${v.unknownArmour ? ' and durability' : ''} leave${v.unknownArmour ? '' : 's'} ${v.unknown > 1 ? 'them' : 'it'} out.`);
+  if (!v.cabin && v.parts) notes.push(tr('No cabin: the energy, tonnage and speed come from the cabin.'));
+  if (v.cabins.length > 1) notes.push(tr(limits ? '{n} cabins: a vehicle has one; the first one counts.' : '{n} cabins: the first one counts.', { n: v.cabins.length }));
+  if (v.engines > 1) notes.push(tr(limits ? '{n} engines: a vehicle has one; the first one counts.' : '{n} engines: the first one counts.', { n: v.engines }));
+  if (v.unknown) {
+    notes.push(tr(v.unknownArmour
+      ? (v.unknown > 1 ? 'No stats yet for {n} parts (armour and other parts this tool has no in-game name for): the mass and durability leave them out.'
+        : 'No stats yet for {n} part (armour and other parts this tool has no in-game name for): the mass and durability leave it out.')
+      : (v.unknown > 1 ? 'No stats yet for {n} parts (parts this tool has no in-game name for): the mass leaves them out.'
+        : 'No stats yet for {n} part (parts this tool has no in-game name for): the mass leaves it out.'), { n: v.unknown }));
+  }
   if (notes.length) out.push(`<div class="vs-note">${notes.map(esc).join('<br>')}</div>`);
   return out.join('');
 }
@@ -244,9 +250,9 @@ export function partCardHtml(name, path, it, { st = false } = {}) {
   const type = it ? typeLabel(it.type) + (st ? tr(' · steering') : '') : '';
   return `<div class="pc-head r-${esc(it?.rarity || 'none')}">${gi(kindIcon(it, path), 'pc-icon')}<div><div class="pc-name">${esc(name)}</div><div class="pc-type">${esc(type || (it ? '' : tr('No stats for this part yet')))}</div></div></div>
     ${rows.length ? `<div class="pc-rows">${rows.join('')}</div>` : ''}
-    ${it ? `<div class="pc-rows pc-base"><div class="pc-row">${gi('health')}<span>Durability</span><b>${fmt(it.hp || 0)} <small>pts</small></b></div>
-      <div class="pc-row">${gi('mass')}<span>Mass</span><b>${fmt(it.mass || 0)} <small>kg</small></b></div></div>` : ''}
-    ${it?.old ? '<div class="pc-note">From the 2018-19 game data: may have changed since</div>' : ''}`;
+    ${it ? `<div class="pc-rows pc-base"><div class="pc-row">${gi('health')}<span>${esc(tr('Durability'))}</span><b>${fmt(it.hp || 0)} <small>pts</small></b></div>
+      <div class="pc-row">${gi('mass')}<span>${esc(tr('Mass'))}</span><b>${fmt(it.mass || 0)} <small>kg</small></b></div></div>` : ''}
+    ${it?.old ? `<div class="pc-note">${esc(tr('From the 2018-19 game data: may have changed since'))}</div>` : ''}`;
 }
 
 // The controls bar at the bottom of the garage: [keys, label] per entry.

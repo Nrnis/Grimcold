@@ -126,7 +126,7 @@ html.skin .mainmode::before, html.skin .mainmode::after { height: 2px; bottom: 1
    the window's own buttons always stay on screen */
 .winbtns { flex: none; }
 .mainmode { min-width: 0; }
-@media (max-width: 1480px) { .mainmode button { min-width: 0; padding: 0 16px; } }
+@media (max-width: 1660px) { .mainmode button { min-width: 0; padding: 0 16px; } } /* (five wide tabs and Language: 1660 px) */
 @media (max-width: 1240px) { #gameVer { display: none; } .mainmode button { padding: 0 12px; } }
 @media (max-width: 1040px) { #topbar .title { display: none; } .mainmode button { padding: 0 10px; font-size: 14px; } }
 
