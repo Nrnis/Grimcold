@@ -6,7 +6,7 @@
 export const ZH_CN = {
   // ---- 顶栏 ----
   'Looking for Crossout…': '正在查找 Crossout…',
-  // ---- the Language menu (1.0.4) ----
+  // ---- the Language menu (1.0.5) ----
   'Interface language / 界面语言': 'Interface language / 界面语言',
   'Interface language': '界面语言',
   'Chinese part names': '中文部件名称',

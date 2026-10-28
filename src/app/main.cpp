@@ -68,7 +68,7 @@ namespace {
 constexpr wchar_t kAppTitle[] = L"Grimcold";
 constexpr wchar_t kWindowClass[] = L"GrimcoldWindow";
 constexpr wchar_t kUiHost[] = L"xo.app";
-constexpr char kVersion[] = "1.0.4";
+constexpr char kVersion[] = "1.0.5";
 constexpr UINT WM_APP_RUN = WM_APP + 1;
 
 // ---------------------------------------------------------------------------------------------

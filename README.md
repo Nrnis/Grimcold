@@ -14,7 +14,7 @@ vehicles or whole maps for Blender, Cinema 4D and other 3D tools.
 
 ## Download
 
-1. Download `Grimcold-1.0.4-win64.zip` from the [latest release](https://github.com/Nrnis/Grimcold/releases/latest).
+1. Download `Grimcold-1.0.5-win64.zip` from the [latest release](https://github.com/Nrnis/Grimcold/releases/latest).
 2. Unzip it anywhere, keep its files together, and run `Grimcold.exe`.
 3. It finds Crossout by itself (Crossout Launcher or Steam). If it does not, pick the folder that
    holds the game's `data` folder.
