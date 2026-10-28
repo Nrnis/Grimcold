@@ -2214,7 +2214,9 @@ bool exportScene(const GameData &gd, const std::vector<SceneItem> &items, const 
         warnings.push_back("the sun is left out: OBJ has no lights (GLB and glTF have)");
     if (items.empty() && custom.empty() && instanced.empty())
         return fail("nothing to export");
-    const bool single = items.size() == 1 && custom.empty() && instanced.empty() && isIdentityMatrix(items[0].matrix);
+    // (one part of the 3D Viewer: a build or a map's selection has a name of its own, and one part of it at
+    // the origin is still named for what it is, under the build)
+    const bool single = sceneName.empty() && items.size() == 1 && custom.empty() && instanced.empty() && isIdentityMatrix(items[0].matrix);
     const bool animatedExport = single && opt.animations && !objFormat;
     // Where each part goes. A mirrored one (negative scale) gets the mirror image of its model and,
     // in place of its own matrix, that matrix times the mirror (x -> -x), which turns it back.

@@ -9,10 +9,12 @@
 // rocket pod a salvo), or on the shot timer (Viewer.fireEvery: every gun together), holding still in
 // between (anim.js gunBeat); the others at their own pace, a shot each loop of their Fire clip.
 import * as THREE from 'three';
-import { firePeriod, Animator, beatShot, rateOf } from './anim.js';
+import { firePeriod, fireTurns, Animator, beatShot, rateOf } from './anim.js';
 
 export const MAP_GUN = 'models/weapons/machinegun_kpvt/machinegun_kpvt.mdl';
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+// what shot k of a gun fires as: its barrels in turn (Fire 1, Fire 2 ...: each out of its own), else FIRE
+const shotAct = (g, k) => (g.turns ? g.turns[k % g.turns.length] : 'FIRE');
 const V = THREE.Vector3;
 
 export class Firing {
@@ -61,8 +63,9 @@ export class Firing {
 
   gunState(group, info) {
     const spec = this.v.shotFor?.(info.path) || null;
-    const g = { group, info, spec, period: 1 / rateOf(spec), t: 0, k: 0, st: 0, sk: 0, held: null };
-    if (info.layers?.length) firePeriod(info).then((p) => { if (p > 0.02) g.period = p; }, () => {});
+    // turns: a gun that fires its barrels one after the other (anim.js fireTurns), the activity of each
+    const g = { group, info, spec, period: 1 / rateOf(spec), t: 0, k: 0, st: 0, sk: 0, held: null, turns: fireTurns(info, this.v.shotFor)?.map((l) => l.activity) || null };
+    if (info.layers?.length) firePeriod(info, this.v.shotFor).then((p) => { if (p > 0.02) g.period = p; }, () => {});
     return g;
   }
 
@@ -89,6 +92,7 @@ export class Firing {
     }
     for (const g of this.guns) this.v.preloadShots(g.info);
     this.cross.hidden = this.v.mode !== 'map'; // (driving: it is up all the time)
+    this.mode = this.v.mode; // (another view: they stop, tick())
     this.on = true;
     this.last = performance.now();
     this.clock = 0;
@@ -107,7 +111,7 @@ export class Firing {
       if (!live() || !copy.userData.skeleton) throw 0;
       const a = new Animator(v, info, copy);
       await a.load();
-      const fire = [...a.layers.values()].find((l) => /^(ACT_)?FIRE|^BURST/i.test(l.activity || ''));
+      const fire = [...a.layers.values()].find((l) => l.turns) || [...a.layers.values()].find((l) => /^(ACT_)?FIRE|^BURST/i.test(l.activity || '')); // (its barrels in turn: Animator)
       if (!live() || !fire) throw 0;
       a.active = fire.name;
       a.time = this.clock; // (in step with its shots, which began with V)
@@ -141,7 +145,7 @@ export class Firing {
 
   tick() {
     if (!this.on) return;
-    if (!this.active) { this.stop(); return; }
+    if (!this.active || this.v.mode !== this.mode) { this.stop(); return; } // (V still held: the builder's guns fired on into the map)
     const now = performance.now(), dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     this.clock += dt;
@@ -151,7 +155,7 @@ export class Firing {
       let going = true; // (in its shot's own stretch: a stream flows)
       if (beat) {
         const { k, since } = beatShot(this.clock, beat);
-        for (let n = 0; g.k <= k && n < 4; n++) { this.v.shoot(g.group, 'FIRE', g.k++, g.info); g.st = 0; } // (a stream starts again with each shot)
+        for (let n = 0; g.k <= k && n < 4; n++) { this.v.shoot(g.group, shotAct(g, g.k), g.k++, g.info); g.st = 0; } // (a stream starts again with each shot)
         g.k = Math.max(g.k, k + 1); // (after a stall: on with the beat, not every shot missed at once)
         going = since < g.period;
         if (g.anim) { g.anim.a.time = k * g.period + Math.min(since, g.period * 0.999); g.anim.a.apply(); }
@@ -160,7 +164,7 @@ export class Firing {
       } else {
         if (g.anim) { g.anim.a.time = this.clock; g.anim.a.apply(); }
         g.t -= dt;
-        for (let n = 0; g.t <= 0 && n < 4; n++) { this.v.shoot(g.group, 'FIRE', g.k++, g.info); g.t += g.period; }
+        for (let n = 0; g.t <= 0 && n < 4; n++) { this.v.shoot(g.group, shotAct(g, g.k), g.k++, g.info); g.t += g.period; }
       }
       if (g.spec?.stream && going) {
         g.st -= dt;

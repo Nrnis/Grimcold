@@ -11,7 +11,7 @@ import { SunShadow, CASCADES } from './shadows.js'; // (Maps' cascaded sun shado
 import { useLampShadows } from './lampshadows.js'; // (the map's lamps' shadows: likewise)
 import { packLights, lightScene } from './xolights.js'; // (point and spot lights: one shader loop; likewise)
 import { weaponAim, arcObject, arcBase, ARC_SIZE, disposeArc, flushAims } from './arcs.js';
-import { Animator, flushClips, gunBeat, rateOf } from './anim.js';
+import { Animator, flushClips, gunBeat, rateOf, firePointsOf, firePointNumber, fireNumber } from './anim.js';
 import { BELT_VERT_HEAD, BELT_VERT } from './belts.js';
 import { flushPhys } from './phys.js';
 import { FxView } from './fxview.js';
@@ -2094,13 +2094,14 @@ export class Viewer {
     else this.sounds.play(snd.shot, at, { gain: snd.gain || 1 });
   }
 
-  // A part's fire points: the fire_01, fire_02 ... bones; on a part that does not move (no skeleton:
-  // the guided rocket launchers), its fire nodes, each worked out from the part's place when asked
-  // (updateWorldMatrix, matrixWorld, like a bone's)
+  // A part's fire points: the fire_01, fire_02 ... bones (fire_fx_01 ... on the skins that name them so:
+  // anim.js firePointsOf); on a part that does not move (no skeleton: the guided rocket launchers), its
+  // fire nodes, each worked out from the part's place when asked (updateWorldMatrix, matrixWorld, like a
+  // bone's)
   fireBones(group) {
-    const bones = (group.userData.skeleton?.bones || []).filter((b) => /^fire_\d+$/i.test(b.name));
+    const bones = firePointsOf(group.userData.skeleton?.bones);
     if (bones.length || group.userData.skeleton) return bones;
-    return (group.userData.fireNodes ||= (group.userData.info?.nodes || []).filter((n) => /^fire_\d+$/i.test(n.name)).map((n) => {
+    return (group.userData.fireNodes ||= firePointsOf(group.userData.info?.nodes).map((n) => {
       const local = new THREE.Matrix4().fromArray(n.matrix);
       const at = { name: n.name, matrixWorld: new THREE.Matrix4() };
       at.updateWorldMatrix = () => { group.updateWorldMatrix(true, false); at.matrixWorld.multiplyMatrices(group.matrixWorld, local); };
@@ -2111,8 +2112,8 @@ export class Viewer {
   // The fire points a shot leaves from (see onShot)
   firePoints(group, act, k) {
     const bones = this.fireBones(group).slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    const n = /^ACT_FIRE(\d+)$/i.exec(act);
-    return n ? bones.filter((b) => +b.name.slice(5) === +n[1]) : bones.length > 2 ? (bones.length ? [bones[k % bones.length]] : []) : bones;
+    const n = fireNumber(act); // (Fire 1, Fire 2 ... however the .model spells them: its own barrel)
+    return n != null ? bones.filter((b) => firePointNumber(b.name) === n) : bones.length > 2 ? (bones.length ? [bones[k % bones.length]] : []) : bones;
   }
 
   // The rounds of a shot (fxmap.js shotFor: spec): out of each fire point along its +Z (the barrel),
@@ -2294,7 +2295,7 @@ export class Viewer {
     if (!g) return;
     const subj = this.rangeOf();
     if (!(this.targetDist > 0) || !subj) { g.visible = false; return; } // (taken away meanwhile)
-    const key = `${this.mode}|${subj.key}|${this.targetDist}`;
+    const key = `${this.mode}|${subj.key}|${this.targetDist}|${this.groundY().toFixed(2)}`; // (the floor: the lift moves it)
     if (g.visible && this.targetKey === key) return; // (it stays put while it stands)
     this.targetKey = key;
     this.placeTarget(g, subj);
@@ -2413,7 +2414,7 @@ export class Viewer {
   // 0: off), else once per the game's reload time (reloadOf: stats.json), a rocket pod's tubes one
   // after another; null: at its own pace. act: the Fire activity (ACT_FIRE2 fires one barrel alone).
   beatOf(group, info, act, period) {
-    const tubes = /^ACT_FIRE\d+$/i.test(act || '') ? 1 : this.fireBones(group).length;
+    const tubes = fireNumber(act) != null ? 1 : this.fireBones(group).length;
     return gunBeat({ every: this.fireEvery || 0, reload: this.reloadOf?.(info?.path) || 0, tubes, period, rate: rateOf(this.shotFor?.(info?.path, act)) });
   }
 
@@ -3009,6 +3010,7 @@ export class Viewer {
       this.camera.position.y -= d;
       this.controls.target.y -= d;
       this.setStage(this.stages.build, 'build'); // (moves the floor and the grid)
+      if (this.target?.visible) { this.target.position.y -= d; this.target.updateMatrixWorld(true); this.target.userData.mark = null; } // (it stands on the floor: it hung in the air)
     } else if (this.cameras.build) { // switched away mid-lift: the builder's camera still follows
       this.cameras.build.pos.y -= d;
       this.cameras.build.target.y -= d;

@@ -27,7 +27,7 @@ export class References {
     this.status = status;
     this.data = data;
     this.list = [];
-    this.unread = []; // (saved pictures that could not be read: kept for the file)
+    this.unread = []; // (saved pictures that could not be read, { at: their place in the list, s }: kept for the file)
     this.active = -1;
     this.shown = true;
     this.adjusting = false;
@@ -166,6 +166,9 @@ export class References {
   toggle() {
     if (!this.list.length) { this.status('No reference pictures yet: "Add picture…" in the panel on the right'); return; }
     if (this.active < 0) { this.activate(0); return; }
+    const r = this.current();
+    // (faded out, the view turned away: P brings its view back, as a click on it in the list does; it hid it)
+    if (this.shown && r.pinned && !this.adjusting && this.match(r.view) < 0.05) { this.goTo(r); this.applied = ''; this.onList(); return; }
     this.shown = !this.shown;
     if (!this.shown) this.setAdjust(false);
     else if (this.current().pinned && this.match(this.current().view) < 0.99) this.goTo(this.current());
@@ -265,11 +268,16 @@ export class References {
 
   // For the build file: the pictures by file (they are read again from disk when it is opened).
   serialize() {
-    return {
-      list: [...this.list.map((r) => ({ file: r.file, name: r.name, pinned: r.pinned, view: r.view, x: round(r.x), y: round(r.y), scale: round(r.scale), opacity: r.opacity, front: r.front })),
-        ...this.unread], // (pictures that could not be read now stay, with their views: on a stick, renamed, offline)
-      active: this.active,
-    };
+    const read = this.list.map((r) => ({ file: r.file, name: r.name, pinned: r.pinned, view: r.view, x: round(r.x), y: round(r.y), scale: round(r.scale), opacity: r.opacity, front: r.front }));
+    // (pictures that could not be read now stay, with their views, at their places: on a stick, renamed, offline;
+    // they went to the end of the list)
+    const list = [];
+    let active = -1;
+    for (let i = 0, u = 0; i < read.length || u < this.unread.length;) {
+      if (u < this.unread.length && (this.unread[u].at <= list.length || i >= read.length)) list.push(this.unread[u++].s);
+      else { if (i === this.active) active = list.length; list.push(read[i++]); }
+    }
+    return { list, active };
   }
 
   async clear() {
@@ -287,7 +295,8 @@ export class References {
   async load(saved) {
     await this.clear();
     const missing = [];
-    for (const s of saved?.list || []) {
+    let active = -1;
+    for (const [k, s] of (saved?.list || []).entries()) {
       try {
         const img = await this.call('loadImagePath', { file: s.file });
         this.list.push({
@@ -295,11 +304,11 @@ export class References {
           view: s.view && Array.isArray(s.view.pos) ? s.view : this.view(), x: +s.x || 0, y: +s.y || 0, scale: +s.scale || 1,
           opacity: s.opacity >= 0 ? +s.opacity : DEFAULT_OPACITY, front: s.front !== false,
         });
-      } catch { missing.push(s.file); if (s?.file) this.unread.push(s); }
+        if (k === saved.active) active = this.list.length - 1; // (one before it that can't be read moves it up)
+      } catch { missing.push(s.file); if (s?.file) this.unread.push({ at: k, s }); }
     }
     // (the active picture comes back without moving the camera: the opened build is framed instead)
-    const a = Math.min(saved?.active ?? -1, this.list.length - 1);
-    if (a >= 0) { this.active = a; this.setLens(this.list[a].view.fov); }
+    if (active >= 0) { this.active = active; this.setLens(this.list[active].view.fov); }
     this.applied = '';
     this.onList();
     return missing;

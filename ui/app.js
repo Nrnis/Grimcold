@@ -4,7 +4,7 @@ import { initSupport, crumb } from './support.js'; // (first: it notes the page'
 import { Viewer, CELL } from './viewer.js';
 import { Build } from './build.js';
 import { Embers } from './bgfx.js';
-import { Animator, prettyName } from './anim.js';
+import { Animator, prettyName, firePointsOf } from './anim.js';
 import { muzzleFor, muzzleChoices, shotFor } from './fxmap.js';
 import { gunSound, activitySound, meleeSound, turretSound } from './soundmap.js';
 import { Firing, MAP_GUN } from './firing.js';
@@ -943,6 +943,7 @@ $('extractBtn').addEventListener('click', async () => {
 // ---- main mode: 3D viewer / vehicle builder -----------------------------------------------------------
 function setView(mode) {
   if (state.view === mode) return;
+  gunfire.stop(); // (V held: its guns, hidden behind their firing copies, would be left out of a test drive)
   state.view = mode;
   crumb('view', mode);
   document.querySelectorAll('#mainMode button').forEach((b) => b.classList.toggle('on', b.dataset.view === mode));
@@ -1166,7 +1167,7 @@ function renderAnimCard() {
   const acts = a.activities();
   const dup = (act) => acts.filter((x) => x.activity === act).length > 1;
   $('animSel').innerHTML = '<option value="">Still</option>' +
-    acts.map((l) => `<option value="${esc(l.name)}" ${l.name === a.active ? 'selected' : ''}>${esc(prettyName(l.activity))}${dup(l.activity) ? ' · ' + esc(l.name) : ''}</option>`).join('');
+    acts.map((l) => `<option value="${esc(l.name)}" ${l.name === a.active ? 'selected' : ''}>${esc(l.label || prettyName(l.activity))}${dup(l.activity) ? ' · ' + esc(l.name) : ''}</option>`).join('');
   $('animPlay').textContent = a.playing ? 'Pause' : 'Play';
   $('animSpeed').value = String(a.speed);
   const poses = a.poses();
@@ -1283,7 +1284,7 @@ $('bTarget').addEventListener('change', () => {
 });
 function renderFxRow(a) {
   const info = state.info;
-  const guns = !!(a && info?.nodes?.some((n) => /^fire_\d+$/i.test(n.name)));
+  const guns = !!(a && firePointsOf(info?.nodes).length);
   $('fxRow').hidden = !guns;
   if (!guns) { $('fxTargetRow').hidden = $('fxEveryRow').hidden = true; $('fxSoundRow').hidden = !(a && meleeSound(info?.path)); if (!$('fxSoundRow').hidden) { viewer.sounds.setVolume(fxVolume()); showVolume(); } return; }
   const pick = fxPickOf(info.path), auto = muzzleFor(info.path);
@@ -2038,7 +2039,7 @@ function renderBuildPanel() {
     ['Size (m)', st.size.map((v) => v.toFixed(2)).join(' × ')],
     ['Size (cells)', st.size.map((v) => Math.round(v / CELL)).join(' × ')],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  const comps = st.parts ? build.components() : [];
+  const comps = st.parts ? build.components({ all: true }) : []; // (parts on the cursor where they were)
   const cabin = build.instances.some((i) => build.isCabin(i.path));
   $('bGroups').innerHTML = !st.parts ? '' : comps.length === 1 ? '<span class="ok"><i class="gi" data-gi="ui/icn_check"></i>Every part is attached to the rest</span>'
     : `<span class="warn"><i class="gi" data-gi="icn_attention"></i>${comps.length} separate groups: ${build.loose.size} part(s) ${cabin ? "aren't welded to the cabin" : "don't touch the main body at a connection point"}</span>`;
@@ -2169,7 +2170,8 @@ $('ckList').addEventListener('click', (e) => {
   const it = state.checklist[+row.dataset.k];
   const c = it && checkItem(it);
   if (!c?.paths.length) return;
-  afterBuildLoads().then(() => build.startPlacing(lineModel(c.paths, c.name), '', { st: !!it.st })).then(renderList, (err) => status(err.message, true));
+  // (the builder may have been left while the build loaded: placing then went on in the 3D Viewer)
+  afterBuildLoads().then(() => (state.view === 'build' ? build.startPlacing(lineModel(c.paths, c.name), '', { st: !!it.st }) : null)).then(renderList, (err) => status(err.message, true));
 });
 
 // ---- rebuilding a vehicle from the game: reference pictures ---------------------------------------------
@@ -2344,12 +2346,13 @@ $('bList').addEventListener('click', (e) => {
   if (drop) { build.unloaded.splice(+drop.dataset.drop, 1); renderBuildPanel(); autosave(); status('The missing part is out of the build'); return; }
   const del = e.target.closest('[data-del]');
   if (del) { // (with Symmetry on, the mirror twin goes too, as with Del)
+    if (build.loadingNow) return; // (an edit while the build loads: see Build.setSelection)
     const inst = build.get(+del.dataset.del);
     if (inst) { const twin = build.symmetry ? build.twinOf(inst) : null; build.removeInstance(inst); if (twin) build.removeInstance(twin); build.commit(); }
     return;
   }
   const row = e.target.closest('.brow');
-  if (!row) return;
+  if (!row || row.classList.contains('missing')) return; // (no part to select: it cleared the selection, and dropped a held part)
   const id = +row.dataset.id;
   if (e.shiftKey && build.get(listAnchor)) {
     const ids = build.instances.map((i) => i.id);
@@ -2362,10 +2365,18 @@ $('bList').addEventListener('click', (e) => {
   listAnchor = id;
 });
 $('bName').addEventListener('input', () => { build.name = $('bName').value.trim() || 'My build'; autosave(); });
+$('ckText').addEventListener('input', () => autosave()); // (it is saved with the build: the dot and the autosave missed it)
 const buildBusy = () => { if (!state.restoring && !state.loadingBuild) return false; status('The build is still loading: New and Open wait until it is in', true); return true; };
+// Open before the last build came back (the game data still being read): the opened build stays, the old one
+// does not come back over it later (it is kept as the host's autosave.previous.xobuild). Not New: before the
+// restore there is nothing on the screen to throw away, and the last build still comes back.
+const claimRestore = () => { if (!state.buildRestored) { state.buildRestored = true; state.restorePending = false; } };
+// (Export and Test drive took the parts loaded so far: a part of the build, said to be all of it)
+const buildLoading = (what) => { if (!state.restoring && !state.loadingBuild) return false; status(`The build is still loading: ${what} when it is in`, true); return true; };
 $('bNew').addEventListener('click', async () => {
   if (buildBusy()) return;
   if (buildDirty() && !(await ask('Start a new build? Parts, pictures and the parts list that are not saved will be lost.', { title: 'New build', yes: 'Start a new one' }))) return;
+  if (buildBusy()) return; // (one began loading while the question was up)
   const old = usedTextures();
   // B7: the old build's replaced textures go too, not only its colour edits (they came back on the
   // same parts in the new build, and into its file)
@@ -2395,7 +2406,11 @@ $('bOpen').addEventListener('click', async () => {
     if (!r) return;
     // (as New asks: Open replaced the build and its autosave without a word)
     if (buildDirty() && !(await ask('Open this build in place of the current one? Parts, pictures and the parts list that are not saved will be lost.', { title: 'Open build', yes: 'Open it' }))) return;
-    const failed = await loadBuildFile(JSON.parse(r.text), r.path);
+    if (buildBusy()) return; // (one began loading while the file dialog or the question was up)
+    const data = JSON.parse(r.text); // (checked first: a file that is no build leaves the last build to come back)
+    if (!data || data.kind !== 'build' || !Array.isArray(data.parts)) throw new Error('not a Grimcold build');
+    claimRestore();
+    const failed = await loadBuildFile(data, r.path);
     if (failed) { // (null: another build took over meanwhile)
       state.buildFile = { path: r.path, print: buildPrint() };
       autosave();
@@ -2424,7 +2439,11 @@ for (const [id, axis] of [['bPx', 0], ['bPy', 1], ['bPz', 2]])
     const inst = build.get(build.selected);
     if (!inst) return;
     const p = inst.group.position.toArray();
-    p[axis] = parseFloat($(id).value);
+    let v = parseFloat($(id).value);
+    // (a part half a cell off the boxes' 0.3 m steps: their arrows step half a cell, which went nowhere one
+    // way; it is a whole cell that way)
+    if (Math.abs(Math.abs(v - p[axis]) - CELL / 2) < 1e-4) v = p[axis] + Math.sign(v - p[axis]) * CELL;
+    p[axis] = v;
     build.setPosition(inst.id, p);
     $(id).value = (Math.round(inst.group.position.getComponent(axis) * 1000) / 1000).toString(); // (it went by whole cells: the box shows where)
   });
@@ -2480,9 +2499,7 @@ function pickBuildPaint(p, final) {
   } else if (state.paintMode === 'brush') {
     build.setBrush(true, p);
     if (final) status(`Brush: ${paintLabel(p, state.paintCatalog).name}. Click parts to paint them, or drag over several.`);
-  } else {
-    build.setVehiclePaint(p, { commit: final });
-  }
+  } else if (!build.setVehiclePaint(p, { commit: final })) { syncBuildPaint(); return; } // (refused: the picker shows the build's again)
   clearThumbs();
 }
 function setPaintMode(mode) {
@@ -2511,7 +2528,7 @@ $('bPaintOff').addEventListener('click', () => {
     build.setBrush(true, { kind: 'color', color: build.paintColor, amount: 0 });
     status('The brush takes paint off now: click or drag over parts');
   } else {
-    build.setVehiclePaint(null);
+    if (!build.setVehiclePaint(null)) return; // (refused: it said why)
     status('The vehicle has no paint now (parts painted on their own keep theirs)');
   }
   clearThumbs();
@@ -2560,7 +2577,7 @@ function buildFile() {
   data.replace = { ...Object.fromEntries(Object.entries(state.replaceKept || {}).filter(([b]) => used.has(b) && !state.replace[b])),
     ...Object.fromEntries(Object.entries(state.replace).filter(([b]) => used.has(b)).map(([b, r]) => [b, { file: r.file, name: r.name }])) };
   // rebuilding aids: the reference pictures (by file) and the parts checklist
-  if (refs.list.length) data.refs = refs.serialize();
+  if (refs.list.length || refs.unread.length) data.refs = refs.serialize(); // (also when none of them can be read now)
   if (state.checklist.length || $('ckText').value.trim()) data.checklist = { text: $('ckText').value, items: state.checklist.map(({ name, count, st, done }) => ({ name, count, st, done })) };
   return data;
 }
@@ -2576,7 +2593,7 @@ function fingerprint(text) {
 // (which reference picture is up is not a change of the build: clicking one showed "unsaved changes")
 const printOf = (data) => fingerprint(JSON.stringify(data.refs ? { ...data, refs: { ...data.refs, active: undefined } } : data));
 const buildPrint = () => printOf(buildFile());
-const buildHasContent = () => !!(build.instances.length || build.unloaded.length || refs.list.length || state.checklist.length);
+const buildHasContent = () => !!(build.instances.length || build.unloaded.length || refs.list.length || refs.unread.length || state.checklist.length || $('ckText').value.trim());
 function buildDirty() {
   if (!state.buildRestored || state.loadingBuild) return false;
   return state.buildFile.path ? buildPrint() !== state.buildFile.print : buildHasContent();
@@ -2610,7 +2627,7 @@ async function loadBuildFile(data, from = '', { quiet = false } = {}) {
   if (!data || data.kind !== 'build' || !Array.isArray(data.parts)) throw new Error('not a Grimcold build');
   busy(true, 'Loading the build…');
   state.loadingBuild = (state.loadingBuild || 0) + 1; // (a count: an older load ending must not say "done" for a newer one)
-  let job;
+  let job, held = null;
   state.buildJob = new Promise((res) => (job = res));
   try {
     const old = usedTextures();
@@ -2630,6 +2647,10 @@ async function loadBuildFile(data, from = '', { quiet = false } = {}) {
     }
     const failed = await build.load(data, { onProgress: (k, n) => $('busyText').textContent = `Loading the build… ${k}/${n}` });
     if (failed === null) return null; // (another build, or New, took over)
+    // (its pictures are still to come: no edits until they are in either, as during build.load; Open takes the
+    // file's print after this, so an edit meanwhile showed as saved)
+    held = build.loadGen;
+    build.loadingNow = true;
     for (const b of new Set([...old, ...Object.keys(data.adjust || {})])) showAdjust(b);
     clearThumbs();
     $('bName').value = build.name;
@@ -2647,6 +2668,7 @@ async function loadBuildFile(data, from = '', { quiet = false } = {}) {
     else if (!quiet) status(`Build loaded${from ? ': ' + from : ''} (${build.instances.length} parts)`);
     return failed;
   } finally {
+    if (held !== null && held === build.loadGen) build.loadingNow = false; // (not a newer load's)
     state.loadingBuild--;
     job();
     busy(false); // (each load its own: two at once left the pill up for the session)
@@ -2655,9 +2677,10 @@ async function loadBuildFile(data, from = '', { quiet = false } = {}) {
 }
 
 $('bExport').addEventListener('click', () => {
+  if (buildLoading('export it')) return;
   if (!build.instances.length) { status('The build is empty', true); return; }
   runExport('exportBuild', {
-    parts: build.exportItems({ onlySelected: $('bExpSel').checked }).map((p) => ({ ...p, name: partName(p.path) || p.name })), // (named as in the game)
+    parts: build.exportItems({ onlySelected: $('bExpSel').checked }).map((p) => ({ ...p, name: (partName(p.path) || p.name) + (p.st && partStats.hasSteering(p.path) ? ' ST' : '') })), // (named as in the game, as instName())
     name: build.name, format: state.buildFmt, lod: +$('bLod').value, textures: $('bExpTextures').checked, maxTex: +$('bMaxTex').value || 0,
     dds: $('bExpDds').checked, extraMaps: $('bExpExtra').checked, ao: $('bExpAo').checked, split: $('bExpSplit').checked, heat: 0, ...editsForExport(), // (cold, as the builder shows them)
   }, $('bProgress'), $('bResult'), $('bExport'));
@@ -2692,7 +2715,13 @@ async function restoreJob() {
     const r = await call('autoload', {});
     const data = r?.text ? JSON.parse(r.text) : null;
     let failed = [];
-    if (data && !data.parts?.length && !data.refs && !data.checklist) { build.name = data.name || build.name; $('bName').value = build.name; }
+    if (data && !data.parts?.length && !data.refs && !data.checklist) { // (no parts: its name and paint)
+      build.name = data.name || build.name;
+      $('bName').value = build.name;
+      build.loadPaint(data);
+      build.history = [build.snapshot()];
+      build.future = [];
+    }
     else if (data) {
       failed = await loadBuildFile(data, '', { quiet: true });
       if (failed && !failed.length) status(`Restored your last build (${build.instances.length} parts)`);
@@ -2931,6 +2960,7 @@ $('mapTools').addEventListener('click', (e) => { const b = e.target.closest('[da
 // bridge), at team 1's spawn facing team 2, once the map is in
 $('bDrive').addEventListener('click', async () => {
   $('bDrive').blur();
+  if (buildLoading('drive it')) return;
   if (!build.instances.length) { status('Build a vehicle first: a cabin and wheels, tracks, legs or hovers.', true); return; }
   const name = state.map.name || 'bridge';
   drive.stop();
@@ -2945,6 +2975,7 @@ $('bDrive').addEventListener('click', async () => {
     const look = t2.length ? MapView.centreOf(t2) : mapView.centre;
     yaw = Math.atan2(look.x - at.x, look.z - at.z);
   }
+  if (buildLoading('drive it')) return; // (one may have begun while the map opened)
   const why = drive.start({ at, yaw });
   status(why || `Test drive on ${mapTitle(name)}: W A S D, Space to brake, click the view to aim with the mouse (V or the left button fires), H the horn · Esc to fly`, !!why);
 });
@@ -2952,6 +2983,7 @@ $('bDrive').addEventListener('click', async () => {
 $('mDrive').addEventListener('click', () => {
   $('mDrive').blur();
   if (drive.active) { drive.stop(); return; }
+  if (buildLoading('drive it')) return;
   const why = drive.start();
   if (why) status(why, true);
   else status('Driving: W A S D, Space to brake, drag to look around, V fires its guns · Esc to fly again');
@@ -3171,23 +3203,30 @@ function stepModel(dir, { held = false } = {}) {
 
 // Keys go to text boxes and lists while they have the focus; a focused button or checkbox gives them
 // up (Space would press it, and the builder's keys would do nothing after a click on the toolbar).
+// A key's name for the shortcuts: the letter on the key, also with a non-Latin layout on (a Russian
+// one gives 'к' for R; the camera keys already go by the key itself). Not with AltGr (Ctrl+Alt), and not for a
+// Latin letter or a sign: a Polish ś (AltGr+S) saved, AZERTY's ',' (on M) turned Symmetry on.
+const keyName = (e) => (e.key.length === 1 && !e.altKey && !e.getModifierState?.('AltGraph') && /\p{L}/u.test(e.key) && !/\p{Script=Latin}/u.test(e.key) && /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : e.key).toLowerCase();
 const typing = (el) => !!el && el.nodeType === 1 && (el.isContentEditable || el.matches('input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=button]), select, textarea'));
 function releaseFocus() {
   const el = document.activeElement;
   if (el && el !== document.body && !typing(el)) el.blur?.();
 }
 
-document.addEventListener('keyup', (e) => { garageCam.up(e); drive.key(e, false); mapView.fly.key(e, false); if (e.key.toLowerCase() === 'v') gunfire.stop(); });
+document.addEventListener('keyup', (e) => { garageCam.up(e); drive.key(e, false); mapView.fly.key(e, false); if (keyName(e) === 'v') gunfire.stop(); });
 document.addEventListener('keydown', (e) => {
-  if (document.querySelector('.support-modal:not([hidden])')) return; // (Bug report, Donations, a crash's dialog: the app's keys wait; support.js closes them on Escape)
-  const k = e.key.toLowerCase();
+  // (Bug report, Donations, a crash's dialog: the app's keys wait; support.js closes them on Escape. A yes / no
+  // question too: Space presses its button, Delete deleted the selected parts behind it)
+  if (document.querySelector('.support-modal:not([hidden]), .xo-ask')) return;
+  const k = keyName(e);
   if (e.ctrlKey && k === 'f') { e.preventDefault(); const s = state.view === 'map' ? $('mapSearch') : $('search'); s.focus(); s.select(); return; }
   if (state.view === 'build' && e.ctrlKey && k === 's') { e.preventDefault(); saveBuild({ as: e.shiftKey }); return; } // also from a text box
   if (state.view === 'build' && e.ctrlKey && k === 'o' && !e.shiftKey) { e.preventDefault(); $('bOpen').click(); return; }
   // A dropdown keeps the focus after a mouse pick; its type-to-select would change it (S picked
   // "Studio light", D a skin). It gives up the app's keys: letters, Space, Esc, Home, Delete.
-  const fromSelect = e.target?.tagName === 'SELECT' && !e.ctrlKey && !e.altKey && !e.metaKey &&
-    (e.key.length === 1 || ['Escape', 'Home', 'Delete', 'Backspace', 'ArrowUp', 'ArrowDown'].includes(e.key) ||
+  // (the builder's Ctrl+Z / Y / D / A too: right after a skin pick, Ctrl+Z did nothing)
+  const fromSelect = e.target?.tagName === 'SELECT' && !e.altKey && !e.metaKey && (e.ctrlKey ? state.view === 'build' && ['z', 'y', 'd', 'a'].includes(k) :
+    e.key.length === 1 || ['Escape', 'Home', 'Delete', 'Backspace', 'ArrowUp', 'ArrowDown'].includes(e.key) ||
       (state.view === 'map' && ['ArrowLeft', 'ArrowRight', 'Shift'].includes(e.key)));
   if (fromSelect) { e.preventDefault(); e.target.blur(); }
   else if (typing(e.target)) {

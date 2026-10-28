@@ -144,7 +144,7 @@ function copyNode(o) {
   c.userData = { ...o.userData };
   if (o.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender) c.onBeforeRender = o.onBeforeRender; // (a lamp's clock)
   if (c.isMesh) c.raycast = () => {}; // (the map's picking goes through it)
-  for (const ch of o.children) c.add(copyNode(ch));
+  for (const ch of o.children) if (ch.name !== 'arc') c.add(copyNode(ch)); // (the builder's AR dome of a weapon's firing arc stays there)
   return c;
 }
 function copyOf(g) {
@@ -739,7 +739,7 @@ export class Drive {
         g.still = g.group;
         g.group = copy;
         g.anim = a;
-        g.fire = [...a.layers.values()].find((l) => /^(ACT_)?FIRE|^BURST/i.test(l.activity || '')) || null;
+        g.fire = [...a.layers.values()].find((l) => l.turns) || [...a.layers.values()].find((l) => /^(ACT_)?FIRE|^BURST/i.test(l.activity || '')) || null; // (its barrels in turn: Animator)
         g.idle = a.active; // (its idle, when that moves anything: played between shots)
         g.copy = copy;
       } catch {
@@ -979,8 +979,7 @@ export class Drive {
     this.keys.clear();
     this.look.drag = null;
     if (this.cross) this.cross.hidden = true;
-    this.v.canvas.style.cursor = '';
-    if (this.v.mode === 'map') this.map.fly.sync(); // (flying on from where the camera is)
+    if (this.v.mode === 'map') { this.v.canvas.style.cursor = ''; this.map.fly.sync(); } // (flying on from where the camera is; left for the builder, its cursor stays)
     this.v.shadowDirty = true;
     this.v.dirty = true;
     this.onChange();
@@ -1399,8 +1398,8 @@ export class Drive {
       const a = g.anim;
       a.aimAt(aim, dt);
       const act = firing && g.fire ? g.fire.name : g.idle || null;
-      if (act !== a.active) { a.active = act; a.time = 0; } // (a burst starts at its first shot)
-      else if (act) a.time += dt;
+      if (act !== a.active) { a.active = act; a.time = 0; a.fireClock = 0; a.heldFor = null; } // (a burst starts at its first shot)
+      else if (act) a.advance(dt); // (a Fire on a beat as firing.js fires it: the shot timer, the game's reload; else on its own clock)
       a.apply();
     }
   }

@@ -42,23 +42,61 @@ function rotaryShots(clip) {
 
 // A gun's pace without an Animator (the builder's vehicle fires: firing.js): seconds between its
 // shots as the 3D Viewer fires it, one a loop of its Fire clip (its stack's first clip), six for a
-// rotary barrel; null when its Fire has no clip.
-export async function firePeriod(info) {
+// rotary barrel; a gun that fires its barrels in turn (fireTurns), the longest of their Fires', as
+// Animator.shotPeriod (its firing copy shows each shot's barrel); null when its Fire has no clip.
+// shotFor: Viewer.shotFor.
+export async function firePeriod(info, shotFor = null) {
   const layers = new Map((info?.layers || []).map((l) => [l.name, l]));
-  const fire = [...layers.values()].find((l) => /^(ACT_)?FIRE|^BURST/i.test(l.activity || ''));
-  if (!fire) return null;
-  const order = [], seen = new Set();
-  const walk = (n) => {
-    const l = layers.get(n);
-    if (!l || seen.has(n)) return;
-    seen.add(n);
-    if (l.file && !l.pose) order.push(l);
-    for (const a of l.add || []) walk(a);
+  const periodOf = async (fire) => {
+    const order = [], seen = new Set();
+    const walk = (n) => {
+      const l = layers.get(n);
+      if (!l || seen.has(n)) return;
+      seen.add(n);
+      if (l.file && !l.pose) order.push(l);
+      for (const a of l.add || []) walk(a);
+    };
+    walk(fire.name);
+    const tl = order[0];
+    const clip = tl ? await loadClip(tl.file).catch(() => null) : null;
+    return clip?.duration > 0 ? clip.duration / (tl.speed || 1) / rotaryShots(clip) : null;
   };
-  walk(fire.name);
-  const tl = order[0];
-  const clip = tl ? await loadClip(tl.file).catch(() => null) : null;
-  return clip?.duration > 0 ? clip.duration / (tl.speed || 1) / rotaryShots(clip) : null;
+  const turns = fireTurns(info, shotFor);
+  if (turns) {
+    const ps = (await Promise.all(turns.map(periodOf))).filter((p) => p > 0);
+    return ps.length ? Math.max(...ps) : null;
+  }
+  const fire = [...layers.values()].find((l) => /^(ACT_)?FIRE|^BURST/i.test(l.activity || ''));
+  return fire ? periodOf(fire) : null;
+}
+
+// A gun's fire points: its fire_01, fire_02 ... nodes or bones; ten skins name theirs fire_fx_01 ...
+// (those count when it has no fire_NN). firePointsOf(list): the ones in a list of named things;
+// firePointNumber(name): a fire point's number (its barrel), else null.
+export function firePointsOf(list) {
+  const plain = (list || []).filter((x) => /^fire_\d+$/i.test(x.name));
+  return plain.length ? plain : (list || []).filter((x) => /^fire_fx_\d+$/i.test(x.name));
+}
+export const firePointNumber = (name) => { const m = /^fire_(?:fx_)?(\d+)$/i.exec(name || ''); return m ? +m[1] : null; };
+// The barrel a Fire activity fires alone: Fire 1, Fire 2 ... in the Animation list, whichever way the
+// .model spells it (ACT_FIRE1, FIRE1, FIRE_1, ACT_FIRE_1); null for the others (FIRE, BURST ...).
+export const fireNumber = (act) => { const m = /^(?:ACT_)?FIRE_?(\d+)$/i.exec(act || ''); return m ? +m[1] : null; };
+
+// A gun with a Fire for each barrel (Fire 1, Fire 2 ...: the Starfall's two) fires them one after the
+// other in the game. Its barrels' Fire layers in barrel order, when it has two or more, each with its
+// fire point and none of them a second fire mode (a round of its own: fxmap.js ALT_BY_FOLDER, the
+// Hybrid's ACT_FIRE1 grenades); else null. shotFor: Viewer.shotFor.
+export function fireTurns(info, shotFor = null) {
+  const points = new Set(firePointsOf(info?.nodes).map((n) => firePointNumber(n.name)));
+  const byBarrel = new Map();
+  for (const l of info?.layers || []) {
+    const n = fireNumber(l.activity);
+    if (n != null && points.has(n) && !byBarrel.has(n)) byBarrel.set(n, l);
+  }
+  if (byBarrel.size < 2) return null;
+  const kind = (act) => shotFor?.(info.path, act)?.kind ?? null;
+  const turns = [...byBarrel.entries()].sort((a, b) => a[0] - b[0]).map(([, l]) => l);
+  return turns.some((l) => kind(l.activity) !== kind(null)) ? null : turns;
 }
 
 // Shots a second by the kind of round (fxmap.js SHOTS): a gun whose Fire has no clip of its own fires
@@ -173,12 +211,21 @@ export class Animator {
     // the twin bomb launcher among them, or none for firing, the lock-on launcher with only OPEN and
     // IDLE): a Fire of the viewer's own, with no clip, so it fires the way a flamethrower's pose-only
     // Fire does, again as its muzzle effect ends (Viewer.shotPeriod)
-    if ((info.nodes || []).some((n) => /^fire_\d+$/i.test(n.name)) && viewer.shotFor?.(info.path)
+    if (firePointsOf(info.nodes).length && viewer.shotFor?.(info.path)
       && ![...this.layers.values()].some((l) => /^(ACT_)?FIRE|^BURST/i.test(l.activity || ''))) {
       let name = 'fire';
       while (this.layers.has(name)) name += '_';
       this.layers.set(name, { name, activity: 'FIRE', file: null, files: null, pose: null, add: [], own: true });
       this.ownFire = name;
+    }
+    // A gun that fires its barrels in turn (fireTurns): one more Fire, "Fire 1 + 2", that plays their Fires
+    // one after the other, a shot each, each from its own barrel (turns: their layers' names)
+    const turns = fireTurns(info, viewer.shotFor);
+    if (turns) {
+      let name = 'fire_in_turn';
+      while (this.layers.has(name)) name += '_';
+      const label = `Fire ${turns.map((l) => fireNumber(l.activity)).join(' + ')}`;
+      this.layers.set(name, { name, activity: 'FIRE_IN_TURN', label, file: null, files: null, pose: null, add: [], own: true, turns: turns.map((l) => l.name) });
     }
     this.clips = new Map(); // layer name -> clip
     this.blends = new Map(); // layer name -> [pose clips] spread over the pose range
@@ -254,7 +301,8 @@ export class Animator {
     let p = this.playCache.get(key);
     if (p) return p;
     const all = [...this.layers.values()], acts = all.filter((l) => l.activity);
-    const root = (this.active && this.layers.get(this.active)) || acts.find((l) => l.activity === 'IDLE') || acts[0];
+    let root = (this.active && this.layers.get(this.active)) || acts.find((l) => l.activity === 'IDLE') || acts[0];
+    if (root?.turns) root = this.layers.get(root.turns[0]) || root; // (fired in turn: it aims as its barrels' Fires do)
     const stacks = acts.map((a) => this.stackOf(a.name));
     const inStack = new Set(stacks.flatMap((s) => [...s]));
     const base = root ? this.stackOf(root.name) : new Set();
@@ -368,10 +416,33 @@ export class Animator {
   firing() { return /^(ACT_)?FIRE|^BURST/i.test(this.layers.get(this.active)?.activity || ''); }
 
   // How long one shot takes: a loop of the stack's first clip (a sixth of one for a rotary gun), or for a
-  // gun whose Fire has no clip, its muzzle effect's length (Viewer.shotPeriod).
+  // gun whose Fire has no clip, its muzzle effect's length (Viewer.shotPeriod). Fired in turn: the
+  // longest of its barrels' (each barrel's Fire has its shot's time to play out).
   shotPeriod() {
-    const tl = this.active ? this.timeClipsOf(this.active)[0] : null;
+    const l = this.active ? this.layers.get(this.active) : null;
+    return l?.turns ? Math.max(...l.turns.map((n) => this.periodOf(n))) : this.periodOf(this.active);
+  }
+  periodOf(name) {
+    const tl = name ? this.timeClipsOf(name)[0] : null;
     return tl ? (this.clips.get(tl.name)?.duration || 1) / (tl.speed || 1) / this.shotsPerLoop(tl.name) : Math.max(0.1, this.v.shotPeriod?.(this.info) || 1);
+  }
+
+  // The stack whose clips play now, and its clock: the active one's, looping; fired in turn, shot k's
+  // barrel's Fire (the k-th in turn), once from the start of that shot. act: the activity of shot k.
+  nowPlaying() {
+    const l = this.active ? this.layers.get(this.active) : null;
+    if (!l?.turns) return { name: this.active, time: this.time, once: false };
+    const period = this.shotPeriod(), k = Math.max(0, Math.floor(this.time / period + 1e-6));
+    return { name: l.turns[k % l.turns.length], time: this.time - k * period, once: true };
+  }
+  shotActivity(k) {
+    const l = this.active ? this.layers.get(this.active) : null;
+    return (l?.turns ? this.layers.get(l.turns[k % l.turns.length])?.activity : l?.activity) || '';
+  }
+  // does the active stack play anything over time (fired in turn: any of its barrels' Fires)
+  timed() {
+    const l = this.active ? this.layers.get(this.active) : null;
+    return !!l && (l.turns ? l.turns.some((n) => this.timeClipsOf(n).length) : this.timeClipsOf(this.active).length > 0);
   }
 
   // The clock runs on. While a Fire plays on a beat (gunBeat: the game's reload time, the shot timer)
@@ -402,7 +473,7 @@ export class Animator {
       if (this.playing && this.active) { this.advance(dt); this.checkShot(); }
       return;
     }
-    const moving = (this.playing && this.active && this.timeClipsOf(this.active).length) || this.sweep;
+    const moving = (this.playing && this.timed()) || this.sweep;
     if (!moving) {
       // a gun whose Fire is only an aim pose (flamethrowers) fires all the same: its clock runs on
       if (this.playing && this.active) { this.advance(dt); this.checkShot(); }
@@ -447,7 +518,7 @@ export class Animator {
     const k = Math.floor(this.time / period + 1e-6);
     if (k !== this.shotCycle) {
       this.shotCycle = k;
-      this.v.onShot?.(this.group, act, k, this.info);
+      this.v.onShot?.(this.group, this.shotActivity(k), k, this.info); // (fired in turn: from that shot's barrel)
     }
     // a flamethrower's flame rides projectiles, launched so many a second while it fires
     const proj = this.v.projectileOf?.(this.info);
@@ -481,10 +552,14 @@ export class Animator {
       }
     }
     if (this.active && !this.noTime) {
-      for (const l of this.timeClipsOf(this.active)) {
+      const now = this.nowPlaying();
+      for (const l of this.timeClipsOf(now.name)) {
         const clip = this.clips.get(l.name);
-        const d = clip.duration || 1;
-        this.applyClip(clip, (((this.time * (l.speed || 1)) % d) + d) % d);
+        // (fired in turn: the barrel's own Fire once from its shot; the layers it adds, an idle spin, run on
+        // the clock as with one Fire, where they started over with every shot)
+        const once = now.once && l.name === now.name;
+        const d = clip.duration || 1, t = (once ? now.time : this.time) * (l.speed || 1);
+        this.applyClip(clip, once ? Math.min(Math.max(t, 0), d) : ((t % d) + d) % d);
       }
     }
     this.skel.version = (this.skel.version || 0) + 1; // the viewer's hover picking re-measures on change

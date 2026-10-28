@@ -155,6 +155,9 @@ export class Build {
     this.gizmo.addEventListener('change', () => (this.v.dirty = true));
 
     const c = viewer.canvas;
+    // (the presses below are cancelled, which also kept the focus in a text box: an X typed for one part
+    // moved the part clicked next, and the builder's keys went into the box)
+    const leaveField = () => { const a = document.activeElement; if (a && a !== document.body && a !== c) a.blur?.(); };
     this.marqueeEl = document.createElement('div');
     this.marqueeEl.className = 'marquee';
     this.marqueeEl.hidden = true;
@@ -164,6 +167,7 @@ export class Build {
     c.addEventListener('pointerdown', (e) => {
       if (viewer.mode !== 'build' || e.button !== 0 || !(e.shiftKey || e.ctrlKey || e.metaKey) || this.placing) return;
       e.stopImmediatePropagation();
+      leaveField();
       e.preventDefault();
       try { c.setPointerCapture(e.pointerId); } catch { /* synthetic event */ }
       this.marquee = { x0: e.clientX, y0: e.clientY, remove: (e.ctrlKey || e.metaKey) && !e.shiftKey, active: false };
@@ -173,10 +177,11 @@ export class Build {
     // empty space it turns the camera, as ever; Shift / Ctrl still select.
     c.addEventListener('pointerdown', (e) => {
       if (viewer.mode !== 'build' || e.button !== 0 || !this.brushOn || e.shiftKey || e.ctrlKey || e.metaKey) return;
-      if (this.placing || this.busy || this.gizmo.axis !== null) return;
+      if (this.placing || this.busy || this.loadingNow || this.gizmo.axis !== null) return;
       const inst = this.instanceAt(e);
       if (!inst) return;
       e.stopImmediatePropagation();
+      leaveField();
       e.preventDefault();
       if (e.altKey) { this.onPickPaint(this.paintOf(inst), inst); return; }
       try { c.setPointerCapture(e.pointerId); } catch { /* synthetic event */ }
@@ -189,10 +194,11 @@ export class Build {
     // On empty space the left button still turns the camera.
     c.addEventListener('pointerdown', (e) => {
       if (viewer.mode !== 'build' || e.button !== 0 || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (this.placing || this.busy || this.gizmo.axis !== null) return; // (a gizmo handle under the cursor gets the drag)
+      if (this.placing || this.busy || this.loadingNow || this.gizmo.axis !== null) return; // (a gizmo handle under the cursor gets the drag)
       const inst = this.instanceAt(e);
       if (!inst) return;
       e.stopImmediatePropagation();
+      leaveField();
       e.preventDefault();
       try { c.setPointerCapture(e.pointerId); } catch { /* synthetic event */ }
       this.press = { id: inst.id, x: e.clientX, y: e.clientY, moving: false, released: false };
@@ -292,7 +298,9 @@ export class Build {
   setSelection(ids, { keepPlacing = false } = {}) {
     if (!keepPlacing && this.placing) this.cancelPlacing();
     const seen = new Set();
-    this.sel = ids.filter((id) => id != null && !seen.has(id) && seen.add(id) && this.get(id));
+    // (nothing is selected while a build loads: what is selected gets edited, and load() made those edits the
+    // start of the undo history)
+    this.sel = this.loadingNow ? [] : ids.filter((id) => id != null && !seen.has(id) && seen.add(id) && this.get(id));
     this.attachGizmo();
     this.showSelection();
     this.hover(this.hovered);
@@ -672,11 +680,16 @@ export class Build {
   // selection, the same view, the held part on the same face): R and Shift+R undo each other exactly,
   // though a turn can unweld a placed part.
   turn(kind, sign = 1) {
+    if (!this.placing && this.busy) return; // (a part still being picked up: the selected one turned instead)
     const p = this.placing, held = p ? `held ${p.snapped || p.refused ? FACES.indexOf(p.snapFace) : -1}` : this.sel.join(',');
     const key = `${held}|${this.v.camera.quaternion.toArray().map((x) => Math.round(x * 1000)).join(',')}`;
-    if (this.turnMemo?.key !== key) this.turnMemo = { key, axes: this.turnAxes(p || this.sel.length !== 1 ? null : this.get(this.selected)) };
+    // (a selection keeps them only while nothing but these turns moved it: after a move, an undo or a
+    // part added, R goes about the way its weld points face now)
+    const pose = () => (p ? '' : `${this.instances.length};${this.selection().map((i) => [i.id, ...i.group.position.toArray(), ...i.group.quaternion.toArray()].map((x) => Math.round(x * 1000)).join(',')).join(';')}`);
+    if (this.turnMemo?.key !== key || this.turnMemo.pose !== pose()) this.turnMemo = { key, axes: this.turnAxes(p || this.sel.length !== 1 ? null : this.get(this.selected)) };
     const axes = this.turnMemo.axes;
     this.rotate(axes[kind] || axes.spin, sign);
+    this.turnMemo.pose = pose();
   }
 
   // The held part's turn, played over TURN_TIME: from where it was shown to where the snap put it
@@ -708,7 +721,7 @@ export class Build {
       this.finishTurn();
       const shown = p.hasPos ? g.quaternion.clone() : null, box = shown ? g.userData.box.clone().applyMatrix4(g.matrixWorld) : null;
       p.quat = nearestRotation(q.clone().multiply(p.effQuat || p.quat));
-      p.turnedOn = p.snapped ? p.snapFace : null;
+      p.turnedOn = p.snapped || p.refused ? p.snapFace : null; // (shown turned on it, unwelded: still that face; the next turn snapped it back)
       p.turnFx = shown ? { q0: shown, c0: box.getCenter(new THREE.Vector3()), t0: performance.now(), to: null } : null;
       this.updatePlacement();
       return;
@@ -718,22 +731,46 @@ export class Build {
     const twins = this.selectionTwins();
     const before = this.overlapsOf([...sel, ...twins.map(([, t]) => t)]);
     const grid = Build.gridParity(sel.flatMap((i) => i.slotsWorld));
-    const c = this.selectionCenter(sel);
-    for (const inst of sel) {
-      const g = inst.group;
-      g.position.sub(c).applyQuaternion(q).add(c);
-      g.quaternion.premultiply(q).normalize();
-      g.position.set(cleanSnap(g.position.x), cleanSnap(g.position.y), cleanSnap(g.position.z));
-      this.updateInstance(inst);
+    // A turn about the same axis straight after the last one can go about the point that one turned about in
+    // effect (its middle, plus the half cells that put it back on the grid). The turn back always does, so R then
+    // Shift+R comes back exactly (the half cells went the same way every time: a lone part walked off a cell);
+    // the same way again only while that welds as much as the turn about its middle (two Rs on a welded part
+    // put it a cell off the vehicle), so four Rs on a lone part come back too.
+    const n = typeof axis === 'string' ? AXES[axis] : axis;
+    const pose = () => sel.map((i) => [...i.group.position.toArray(), ...i.group.quaternion.toArray()].map((x) => Math.round(x * 1e4)).join(',')).join(';');
+    const start = sel.map((i) => [i.group.position.clone(), i.group.quaternion.clone()]);
+    const turnAbout = (c) => {
+      sel.forEach((inst, k) => {
+        const g = inst.group;
+        g.position.copy(start[k][0]).sub(c).applyQuaternion(q).add(c);
+        g.quaternion.copy(start[k][1]).premultiply(q).normalize();
+        g.position.set(cleanSnap(g.position.x), cleanSnap(g.position.y), cleanSnap(g.position.z));
+        this.updateInstance(inst);
+      });
+      const p0 = sel[0].group.position.clone();
+      this.alignToGrid(sel, grid);
+      return { c, d: sel[0].group.position.clone().sub(p0) }; // (turning about c, then moving d, is turning about c + (d + q d) / 2)
+    };
+    const ids = new Set(sel.map((i) => i.id));
+    const welds = () => { const index = this.slotIndex(ids); return sel.reduce((s, i) => s + this.connectedSlots(i, index).size, 0); };
+    const last = this.turnPivot, middle = this.selectionCenter(sel);
+    const reuse = last && last.pose === pose() && Math.abs(last.axis.dot(n)) > 0.99;
+    let r = turnAbout(reuse ? last.at.clone() : middle);
+    if (reuse && q.angleTo(last.q) < 1e-3) { // (the same way again)
+      const w = welds();
+      r = turnAbout(middle);
+      if (welds() <= w) r = turnAbout(last.at.clone());
     }
-    this.alignToGrid(sel, grid);
-    for (const [inst, twin] of twins) this.matchTwin(inst, twin);
+    const { c, d } = r;
+    this.turnPivot = Math.abs(d.dot(n)) < 1e-6 ? { axis: n.clone(), q: q.clone(), at: c.clone().add(d.clone().add(d.clone().applyQuaternion(q)).multiplyScalar(0.5)), pose: pose() } : null;
+    for (const [inst, twin] of twins) if (!this.onPlane(inst)) this.matchTwin(inst, twin);
     this.showSelection();
     this.commitEdit([...sel, ...twins.map(([, t]) => t)], before, 'turn it');
   }
 
   // Mirrors the selection left/right (across the build's X axis) in place.
   toggleMirror() {
+    if (!this.placing && this.busy) return; // (a part still being picked up: the selected one was mirrored instead)
     if (this.placing) { this.placing.mirrored = !this.placing.mirrored; this.updatePlacement(); return; }
     const sel = this.selection();
     if (!sel.length) return;
@@ -748,7 +785,7 @@ export class Build {
       g.scale.x = inst.mirrored ? -1 : 1;
       this.updateInstance(inst);
     }
-    for (const [inst, twin] of twins) this.matchTwin(inst, twin);
+    for (const [inst, twin] of twins) if (!this.onPlane(inst)) this.matchTwin(inst, twin);
     this.showSelection();
     this.commitEdit([...sel, ...twins.map(([, t]) => t)], before, 'mirror it');
   }
@@ -805,12 +842,15 @@ export class Build {
   // The twin is the same model at the mirrored spot with the mirrored turn; a part lying across
   // the mirror plane (its middle on it) is its own mirror image and has none.
   twinOf(inst) {
-    if (!inst) return null;
-    if (Math.abs((inst.box.min.x + inst.box.max.x) / 2 - this.mirrorX()) < 0.01) return null;
+    if (!inst || this.onPlane(inst)) return null;
     const tw = this.twinTransform(inst.group.position, inst.group.quaternion, inst.mirrored);
     return this.instances.find((o) => o !== inst && o.path === inst.path && o.mirrored === tw.mirrored &&
       o.group.position.distanceTo(tw.position) < 0.01 && Math.abs(o.group.quaternion.dot(tw.quaternion)) > 0.9999) || null;
   }
+
+  // A part whose middle lies on the mirror plane: its own mirror image. Edits that bring a part there
+  // leave its twin where it was (matchTwin would put it inside the part).
+  onPlane(inst) { return Math.abs((inst.box.min.x + inst.box.max.x) / 2 - this.mirrorX()) < 0.01; }
 
   // [part, twin] for each selected part whose mirror twin is not selected itself (Symmetry on):
   // edits to the part are repeated, mirrored, on the twin.
@@ -852,7 +892,7 @@ export class Build {
     const hits = rc.intersectObjects(targets, true).filter((h) => h.object.isMesh && h.face), hit = hits[0];
     const S = new THREE.Vector3(p.mirrored ? -1 : 1, 1, 1);
     let q = p.quat;
-    let pos = null, snapped = false, onPart = null, kept = null;
+    let pos = null, snapped = false, onPart = null, kept = null, away = null;
     const frame = (quat) => {
       const A = new THREE.Matrix4().compose(new THREE.Vector3(), quat, S);
       const box = p.ghost.userData.box.clone().applyMatrix4(A);
@@ -886,16 +926,33 @@ export class Build {
         let mn = Infinity;
         for (const k of boxCorners(F.box)) mn = Math.min(mn, k.dot(NT));
         pos = pos0.addScaledVector(NT, P.dot(NT) - mn - pos0.dot(NT));
+        // (off the surface, never into it: rounded the nearest way it went up to 7.5 cm in, and the grid's half
+        // cell below too, so it showed red where it fits)
+        const a = [0, 1, 2].find((k) => NT.getComponent(k) !== 0), out = pos.getComponent(a);
         pos.set(snap(pos.x, HALF), snap(pos.y, HALF), snap(pos.z, HALF));
+        pos.setComponent(a, NT.getComponent(a) > 0 ? Math.ceil(out / HALF - 1e-4) * HALF : Math.floor(out / HALF + 1e-4) * HALF);
+        away = { axis: a, dir: NT.getComponent(a) };
       }
     } else if ((kept = this.keptSnap(null, rc.ray, frame))) { // (just off the build's edge: it stays on)
       ({ pos, q, F } = kept);
       snapped = true;
     } else {
       const P = new THREE.Vector3();
-      if (!rc.ray.intersectPlane(this.ground, P)) return;
-      this.lastHit = P.clone();
-      pos = new THREE.Vector3(snap(P.x - F.center.x, CELL), Math.ceil((-F.box.min.y - 1e-4) / HALF) * HALF, snap(P.z - F.center.z, CELL));
+      if (rc.ray.intersectPlane(this.ground, P)) {
+        this.lastHit = P.clone();
+        p.refused = false; // (off the vehicle: no face it was turned on any more, R spun it about the wall's)
+        pos = new THREE.Vector3(snap(P.x - F.center.x, CELL), Math.ceil((-F.box.min.y - 1e-4) / HALF) * HALF, snap(P.z - F.center.z, CELL));
+      } else { // over the sky: it stays where it is shown, but a turn, a mirror or a drop count (a second click
+        // dropped a copy inside the part just dropped, and X mirrored the drop but not the ghost)
+        if (!p.hasPos) return;
+        const g = p.ghost;
+        if (p.turnFx || p.effQuat) { q = p.turnFx ? p.quat : p.effQuat; F = frame(q); }
+        const at = g.userData.box.clone().applyMatrix4(new THREE.Matrix4().compose(g.position, g.quaternion, g.scale)).getCenter(new THREE.Vector3());
+        pos = at.sub(F.center); // (turned or mirrored about its middle)
+        pos.set(snap(pos.x, HALF), snap(pos.y, HALF), snap(pos.z, HALF));
+        snapped = !!p.snapped;
+        onPart = p.onPart;
+      }
     }
     if (!snapped) p.snap = null;
     if (!snapped) { // dropped on a bare surface or the ground: still onto the vehicle's grid (half a cell either way)
@@ -904,7 +961,7 @@ export class Build {
       const toward = this.lastHit ? this.lastHit.clone().sub(F.center).sub(pos) : new THREE.Vector3();
       for (let k = 0; k < 3; k++) {
         if (p.grid[k] == null || have[k] == null || p.grid[k] === have[k]) continue;
-        const dir = k === 1 ? 1 : Math.sign(toward.getComponent(k)) || 1; // never down into the ground
+        const dir = away?.axis === k ? away.dir : k === 1 ? 1 : Math.sign(toward.getComponent(k)) || 1; // never down into the ground, nor into the surface
         pos.setComponent(k, pos.getComponent(k) + dir * HALF);
       }
     }
@@ -1162,12 +1219,21 @@ export class Build {
     for (const [inst, twin] of pairs) this.matchTwin(inst, twin);
     const stayed = [];
     pairs.forEach(([inst, twin], k) => {
-      const onPlane = Math.abs((inst.box.min.x + inst.box.max.x) / 2 - this.mirrorX()) < 0.01;
-      if (onPlane || this.instances.some((o) => o !== twin && !twins.has(o) && o.group.visible && partsOverlap(twin.hulls, o.hulls))) {
+      if (this.onPlane(inst) || this.instances.some((o) => o !== twin && !twins.has(o) && o.group.visible && partsOverlap(twin.hulls, o.hulls))) {
         this.restoreTransform(twin, old[k]);
         stayed.push(twin);
       }
     });
+    // (a twin that stayed was passed over as "about to move away": one that followed may have landed on it)
+    for (let changed = true; changed;) {
+      changed = false;
+      pairs.forEach(([, twin], k) => {
+        if (stayed.includes(twin) || !stayed.some((s) => partsOverlap(twin.hulls, s.hulls))) return;
+        this.restoreTransform(twin, old[k]);
+        stayed.push(twin);
+        changed = true;
+      });
+    }
     return { stayed, undo: () => pairs.forEach(([, twin], k) => this.restoreTransform(twin, old[k])) };
   }
 
@@ -1248,6 +1314,7 @@ export class Build {
       twins: this.selectionTwins(),
       grid: Build.gridParity(this.selection().flatMap((i) => i.slotsWorld)),
     };
+    this.drag.twinStart = this.drag.twins.map(([, t]) => this.transformState(t)); // (a part dragged onto the mirror plane: its twin goes back)
     this.drag.before = this.overlapsOf([...this.drag.members.map((m) => m.inst), ...this.drag.twins.map(([, t]) => t)]);
   }
 
@@ -1266,8 +1333,14 @@ export class Build {
       this.updateInstance(m.inst);
     }
     if (this.gizmoMode === 'translate') this.pivot.position.copy(d.start).add(move); // the gizmo sits on the snapped spot
-    for (const [inst, twin] of d.twins) this.matchTwin(inst, twin);
+    this.followDrag(d);
     this.showSelection({ fast: true });
+  }
+
+  // The twins follow the dragged parts, but not onto the mirror plane: there a part has none, and its
+  // twin stays where it was before the drag.
+  followDrag(d) {
+    d.twins.forEach(([inst, twin], k) => (this.onPlane(inst) ? this.restoreTransform(twin, d.twinStart[k]) : this.matchTwin(inst, twin)));
   }
 
   gizmoDone() {
@@ -1280,7 +1353,7 @@ export class Build {
       this.updateInstance(m.inst);
     }
     if (d.members.some((m) => Math.abs(m.inst.group.quaternion.dot(m.quat)) < 0.9999)) this.alignToGrid(d.members.map((m) => m.inst), d.grid);
-    for (const [inst, twin] of d.twins) this.matchTwin(inst, twin);
+    this.followDrag(d);
     this.showSelection();
     this.commitEdit([...d.members.map((m) => m.inst), ...d.twins.map(([, t]) => t)], d.before, 'move it');
   }
@@ -1321,7 +1394,7 @@ export class Build {
   // Parts not welded to the cabin (as in the game) are tinted red; without a cabin, the ones
   // outside the biggest group of welded parts.
   markLoose() {
-    const comps = this.instances.length > 1 ? this.components() : [];
+    const comps = this.instances.length > 1 ? this.components({ all: true }) : []; // (a commit while a part is held: Esc must not leave parts red)
     const main = comps.find((g) => g.some((i) => this.isCabin(i.path))) || comps[0];
     this.loose = new Set(comps.filter((g) => g !== main).flat().map((i) => i.id));
     for (const inst of this.instances) {
@@ -1417,11 +1490,11 @@ export class Build {
   static cellKey(x, y, z) { return `${x},${y},${z}`; }
   static cellOf(p) { return [Math.round(p.x / HALF), Math.round(p.y / HALF), Math.round(p.z / HALF)]; }
 
-  // exclude: ids of parts to leave out (besides the hidden ones being moved)
-  slotIndex(exclude = null) {
+  // exclude: ids of parts to leave out (besides the hidden ones being moved); all: the hidden ones too
+  slotIndex(exclude = null, { all = false } = {}) {
     const map = new Map();
     for (const inst of this.instances) {
-      if (!inst.group.visible || exclude?.has(inst.id)) continue;
+      if ((!all && !inst.group.visible) || exclude?.has(inst.id)) continue;
       inst.slotsWorld.forEach((s, i) => {
         const k = Build.cellKey(...Build.cellOf(s.pos));
         if (!map.has(k)) map.set(k, []);
@@ -1448,10 +1521,11 @@ export class Build {
   }
 
   // Groups of parts that are attached to each other (Crossout wants one group). Parts hidden while
-  // they are being moved are left out (they are on the cursor, not loose).
-  components() {
-    const index = this.slotIndex();
-    const live = this.instances.filter((i) => i.group.visible);
+  // they are being moved are left out (they are on the cursor, not loose); all: they count where they
+  // were (what is attached does not change while a part is only held).
+  components({ all = false } = {}) {
+    const index = this.slotIndex(null, { all });
+    const live = all ? this.instances : this.instances.filter((i) => i.group.visible);
     const parent = new Map(live.map((i) => [i.id, i.id]));
     const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
     for (const inst of live) {
@@ -1511,7 +1585,7 @@ export class Build {
       m.group.position.set(cleanSnap(m.group.position.x), cleanSnap(m.group.position.y), cleanSnap(m.group.position.z));
       this.updateInstance(m);
     }
-    for (const [a, t] of twins) this.matchTwin(a, t);
+    for (const [a, t] of twins) if (!this.onPlane(a)) this.matchTwin(a, t);
     this.showSelection();
     this.commitEdit([...group, ...twins.map(([, t]) => t)], before, 'move it');
   }
@@ -1570,12 +1644,15 @@ export class Build {
     this.v.dirty = true;
   }
 
-  // The vehicle's paint (null: none). commit: an undo step (not while a slider is dragged).
+  // The vehicle's paint (null: none). commit: an undo step (not while a slider is dragged). false: refused (a
+  // build still loading).
   setVehiclePaint(p, { commit = true } = {}) {
+    if (this.loadingNow) { this.status('The build is still loading'); return false; }
     this.paint = p ? normPaint(p) : null;
     if (this.paint?.kind === 'color') this.paintColor = this.paint.color.slice();
     this.applyPaints();
     if (commit) this.commit(); else this.onChange();
+    return true;
   }
 
   // These parts' own paint (null: back to the vehicle's; amount 0: bare), and their mirror twins' with
@@ -1591,6 +1668,7 @@ export class Build {
 
   // Every part back to the vehicle's paint.
   clearPartPaints() {
+    if (this.loadingNow) return 0;
     const own = this.instances.filter((i) => i.paint);
     if (!own.length) return 0;
     for (const i of own) i.paint = null;
@@ -1647,10 +1725,15 @@ export class Build {
   async restore(s) {
     const data = JSON.parse(s);
     const want = new Map(data.parts.map((p) => [p.id, p]));
+    const keep = [...this.sel], swapped = new Set(); // (a part of another skin comes back as a new one with its id: still selected)
     for (const inst of [...this.instances]) {
       const w = want.get(inst.id);
-      if (!w || w.path !== inst.path || w.skin !== inst.skin) this.removeInstance(inst);
+      if (!w || w.path !== inst.path || w.skin !== inst.skin) {
+        if (w && this.isSelected(inst.id)) swapped.add(inst.id);
+        this.removeInstance(inst);
+      }
     }
+    const left = [...this.sel]; // (a part picked while parts load stays picked)
     let missing = 0;
     for (const p of data.parts) {
       let inst = this.get(p.id);
@@ -1669,7 +1752,9 @@ export class Build {
     this.applyPaints();
     const order = new Map(data.parts.map((p, k) => [p.id, k])); // parts brought back keep their place in the list
     this.instances.sort((a, b) => (order.get(a.id) ?? 1e9) - (order.get(b.id) ?? 1e9));
-    if (this.sel.some((id) => !this.get(id))) this.setSelection(this.sel.filter((id) => this.get(id)), { keepPlacing: true });
+    const same = this.sel.length === left.length && this.sel.every((id, k) => id === left[k]);
+    const sel = same ? keep.filter((id) => this.get(id) && (this.sel.includes(id) || swapped.has(id))) : this.sel.filter((id) => this.get(id));
+    if (sel.length !== this.sel.length || sel.some((id, k) => id !== this.sel[k])) this.setSelection(sel, { keepPlacing: true });
     this.showSelection();
     this.refreshWorld();
     this.onChange();
@@ -1735,9 +1820,7 @@ export class Build {
     try {
       this.unloaded = []; // (the previous build's: never mixed into this one, even half way)
       this.name = data.name || 'My build';
-      // (an old build's { color, amount }: a colour; amount 0, no paint, its colour kept for the colour box)
-      this.paint = data.paint?.amount > 0 ? normPaint(data.paint) : null;
-      if (Array.isArray(data.paint?.color) && data.paint.color.length >= 3) this.paintColor = data.paint.color.slice(0, 3).map((v) => Math.min(1, Math.max(0, +v || 0)));
+      this.loadPaint(data);
       const failed = [];
       let k = 0;
       for (const p of data.parts || []) {
@@ -1760,13 +1843,20 @@ export class Build {
     }
   }
 
+  // The vehicle's paint of a build file (also one without parts). An old build's { color, amount } is a
+  // colour; amount 0 is no paint, its colour kept for the colour box.
+  loadPaint(data) {
+    this.paint = data.paint?.amount > 0 ? normPaint(data.paint) : null;
+    if (Array.isArray(data.paint?.color) && data.paint.color.length >= 3) this.paintColor = data.paint.color.slice(0, 3).map((v) => Math.min(1, Math.max(0, +v || 0)));
+  }
+
   // For the exporter: every placed part with its world matrix (glTF space, column-major).
   exportItems({ onlySelected = false } = {}) {
     return (onlySelected && this.sel.length ? this.selection() : this.instances).map((i) => {
       i.group.updateMatrixWorld(true);
       const pose = i.group.userData.pose?.trs; // (the pose its meshes are shown in: the export bakes the same one)
       const paint = this.paintOf(i); // (as it shows: its own, else the vehicle's; the export bakes it in)
-      return { path: i.path, skin: i.skin, name: i.info.name, matrix: i.group.matrixWorld.toArray().map((v) => Math.round(v * 1e6) / 1e6), ...(pose ? { pose } : {}), ...(paint ? { paint } : {}) };
+      return { path: i.path, skin: i.skin, st: !!i.st, name: i.info.name, matrix: i.group.matrixWorld.toArray().map((v) => Math.round(v * 1e6) / 1e6), ...(pose ? { pose } : {}), ...(paint ? { paint } : {}) };
     });
   }
 
@@ -1783,7 +1873,7 @@ export class Build {
     for (const i of this.instances) tris += i.group.userData.tris;
     const b = this.box();
     const size = b.isEmpty() ? [0, 0, 0] : b.getSize(new THREE.Vector3()).toArray();
-    return { parts: this.instances.length, tris, size, groups: this.instances.length ? this.components().length : 0 };
+    return { parts: this.instances.length, tris, size, groups: this.instances.length ? this.components({ all: true }).length : 0 };
   }
 
   onModeChanged() {

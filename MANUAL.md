@@ -144,6 +144,10 @@ game's `Crossout.exe`; hover it for the full version and folder).
     straight in from the back slot while the idle spins it. Clips slide bones in their parent's
     frame, as the game's Maya rigs key them: recoils kick back along the barrel, a crossbow's limbs
     snap forward as mirror images (exports the same).
+  - **Fire 1 + 2**: every gun with a Fire for each barrel (the Starfall's Fire 1 and Fire 2) also gets
+    one that fires them in turn, as the game does: Fire 1's recoil and shot out of the first barrel,
+    then Fire 2's out of the second, and so on. The builder's vehicle (V) and a test drive fire
+    those guns the same way. (Exports keep the game's own Fire 1 and Fire 2.)
   - **Loaded projectiles** (a part shown from its folder's row): when firing, the round that slides
     out of its slot flies out of the launcher (the Porcupine's front barrel, the airstrike rocket, the
     burst grenade launcher's grenade), and a round resting in its slot gives way while the next one
@@ -157,8 +161,9 @@ game's `Crossout.exe`; hover it for the full version and folder).
   - **Firing effects**: guns fire with the game's own muzzle flashes, flames, sparks and smoke
     (its `particles/` effects, read and played here: flip-book sprites, streaks stretched along
     their flight, fireballs glowing through the game's heat ramps, dome meshes round the muzzle,
-    smoke lit by the sun). They come out of the gun's fire points (`fire_01`, `fire_02`, ...; Fire 2
-    from the second barrel only, a rocket pod one tube after the other) with each shot: a cannon's
+    smoke lit by the sun). They come out of the gun's fire points (`fire_01`, `fire_02`, ..., on ten skins
+    `fire_fx_01` ...; Fire 2
+    from the second barrel only, Fire 1 + 2 from each in turn, a rocket pod one tube after the other) with each shot: a cannon's
     single blast, a machine gun's one-frame flashes five times a second, a minigun's 21 a second (six
     per turn of its barrels), a flamethrower's stream of fireballs riding projectiles 14 m out. Smoke stays where it was blown out while the gun turns,
     and fades into the floor. The speed menu slows them down with the animation. Which effect a gun

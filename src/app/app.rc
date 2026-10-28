@@ -4,8 +4,8 @@
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "app.manifest"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 1,0,2,0
-PRODUCTVERSION 1,0,2,0
+FILEVERSION 1,0,3,0
+PRODUCTVERSION 1,0,3,0
 FILEOS VOS_NT_WINDOWS32
 FILETYPE VFT_APP
 BEGIN
@@ -15,8 +15,8 @@ BEGIN
     BEGIN
       VALUE "FileDescription", "Grimcold"
       VALUE "ProductName", "Grimcold"
-      VALUE "FileVersion", "1.0.2"
-      VALUE "ProductVersion", "1.0.2"
+      VALUE "FileVersion", "1.0.3"
+      VALUE "ProductVersion", "1.0.3"
       VALUE "OriginalFilename", "Grimcold.exe"
     END
   END

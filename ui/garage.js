@@ -336,7 +336,8 @@ export class GarageCamera {
   // keydown: true when the key belongs to the camera (then it does nothing else)
   down(e) {
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
-      if (!this.shift) this.shift = { t0: performance.now(), pos: this.v.camera.position.clone(), target: this.v.controls.target.clone(), used: false };
+      // (with Ctrl / Alt already down it is a modifier from the start: Ctrl+Shift+S lowered the camera for good)
+      if (!this.shift) this.shift = { t0: performance.now(), pos: this.v.camera.position.clone(), target: this.v.controls.target.clone(), used: e.ctrlKey || e.altKey || e.metaKey };
       return true;
     }
     if (e.ctrlKey || e.altKey || e.metaKey) { this.shiftUsed(); return false; }
