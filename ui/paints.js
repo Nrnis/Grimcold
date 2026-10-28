@@ -14,6 +14,7 @@
 // amount 0 is no paint at all (a part kept bare under a painted vehicle).
 const enc = encodeURIComponent;
 const DATA = 'https://xo.data';
+import { t as tr } from './i18n.js';
 
 export const DEFAULT_COLOR = [0.55, 0.13, 0.1];
 // the colour swatches (the old ones first: builds and looks name them)
@@ -116,17 +117,17 @@ export const thumbOf = (tex, max = 64) => `${DATA}/png?base=${enc(tex)}&max=${ma
 
 // What a paint is called ("Camouflage 01", "Crimson", "#5a7c33", "Chrome"), and what kind it is.
 export function paintLabel(p, catalog) {
-  if (!p) return { name: 'No paint', kind: '' };
-  if (p.amount <= 0) return { name: 'No paint', kind: 'bare' };
-  const pct = Math.round(p.amount * 100) + '%', fin = p.finish ? ` · ${FINISHES[p.finish].label.toLowerCase()}` : '';
+  if (!p) return { name: tr('No paint'), kind: '' };
+  if (p.amount <= 0) return { name: tr('No paint'), kind: 'bare' };
+  const pct = Math.round(p.amount * 100) + '%', fin = p.finish ? ` · ${tr(FINISHES[p.finish].label).toLowerCase()}` : '';
   if (p.kind === 'color') {
     const h = hex(p.color), mat = MATERIALS.find(([c, , f]) => c === h && f === p.finish), known = COLORS.find(([c]) => c === h);
-    if (mat) return { name: mat[1], kind: `Material · ${pct}` };
-    return { name: known ? known[1] : h.toUpperCase(), kind: `Colour${fin} · ${pct}` };
+    if (mat) return { name: tr(mat[1]), kind: tr('Material · {pct}', { pct }) };
+    return { name: known ? tr(known[1]) : h.toUpperCase(), kind: tr('Colour{fin} · {pct}', { fin, pct }) };
   }
   const it = catalog?.byTex.get(p.tex);
   const name = it ? it.name : paintName(p.tex.split('/').pop().replace(/_a$/, ''));
-  return { name, kind: `${p.kind === 'chameleon' ? 'Chameleon' : 'Pattern'}${fin} · ${pct}` };
+  return { name, kind: (p.kind === 'chameleon' ? tr('Chameleon') : tr('Pattern')) + tr('{what}{fin} · {pct}', { what: '', fin, pct }) };
 }
 
 // ---- the picker ---------------------------------------------------------------------------------
@@ -144,17 +145,17 @@ export class PaintPicker {
     this.query = '';
     el.classList.add('pp');
     el.innerHTML = `
-      <div class="pp-now"><span class="pp-chip"></span><div class="pp-what"><b class="pp-name">No paint</b><span class="pp-kind"></span></div></div>
-      <div class="seg small pp-tabs"${tabs ? '' : ' hidden'}><button data-tab="color" class="on" title="Plain colours, and the game's metal materials">Colours</button><button data-tab="pattern" title="The game's patterns: camouflage, carbon, flames, scales …">Patterns</button><button data-tab="chameleon" title="The game's chameleon paints: their colour changes with the angle you see the surface at">Chameleon</button></div>
-      <input type="search" class="pp-search" placeholder="Search paints" spellcheck="false" hidden>
+      <div class="pp-now"><span class="pp-chip"></span><div class="pp-what"><b class="pp-name">${tr('No paint')}</b><span class="pp-kind"></span></div></div>
+      <div class="seg small pp-tabs"${tabs ? '' : ' hidden'}><button data-tab="color" class="on" title="Plain colours, and the game's metal materials">${tr('Colours')}</button><button data-tab="pattern" title="The game's patterns: camouflage, carbon, flames, scales …">${tr('Patterns')}</button><button data-tab="chameleon" title="The game's chameleon paints: their colour changes with the angle you see the surface at">${tr('Chameleon')}</button></div>
+      <input type="search" class="pp-search" placeholder="${tr('Search paints')}" spellcheck="false" hidden>
       <div class="pp-grid"></div>
       <div class="pp-mats"></div>
-      <div class="pp-ar pp-color-row"><span class="pp-color-label">Colour</span><input type="color" class="pp-color" value="#8c2119"><span></span></div>
-      <div class="pp-ar pp-finish-row" title="How the paint shines: as the part does (Matte), as a metallic paint, or as polished metal (Chrome)"><span>Finish</span><div class="seg small pp-finish"><button data-finish="" class="on">Matte</button><button data-finish="metallic">Metallic</button><button data-finish="chrome">Chrome</button></div><span></span></div>
-      <div class="pp-ar"><span>Amount</span><input type="range" class="pp-amount" min="0" max="1" step="0.01" value="0"><span class="val pp-amount-val">0%</span></div>
-      <div class="pp-ar pp-size-row" hidden title="How big the pattern is laid over the part (1× as the game lays it; double-click: back to 1×)"><span>Size</span><input type="range" class="pp-size" min="-3" max="3" step="0.1" value="0"><span class="val pp-size-val">1×</span></div>`;
+      <div class="pp-ar pp-color-row"><span class="pp-color-label">${tr('Colour')}</span><input type="color" class="pp-color" value="#8c2119"><span></span></div>
+      <div class="pp-ar pp-finish-row" title="How the paint shines: as the part does (Matte), as a metallic paint, or as polished metal (Chrome)"><span>${tr('Finish')}</span><div class="seg small pp-finish"><button data-finish="" class="on">${tr('Matte')}</button><button data-finish="metallic">${tr('Metallic')}</button><button data-finish="chrome">${tr('Chrome')}</button></div><span></span></div>
+      <div class="pp-ar"><span>${tr('Amount')}</span><input type="range" class="pp-amount" min="0" max="1" step="0.01" value="0"><span class="val pp-amount-val">0%</span></div>
+      <div class="pp-ar pp-size-row" hidden title="How big the pattern is laid over the part (1× as the game lays it; double-click: back to 1×)"><span>${tr('Pattern size')}</span><input type="range" class="pp-size" min="-3" max="3" step="0.1" value="0"><span class="val pp-size-val">1×</span></div>`;
     this.q = (s) => el.querySelector(s);
-    this.q('.pp-mats').innerHTML = MATERIALS.map(([c, n, f]) => `<button data-pick="material" data-color="${c}" data-finish="${f}" title="Material: ${n}"><i style="background:${c}"></i>${n}</button>`).join('');
+    this.q('.pp-mats').innerHTML = MATERIALS.map(([c, n, f]) => `<button data-pick="material" data-color="${c}" data-finish="${f}" title="${tr('Material')}: ${tr(n)}"><i style="background:${c}"></i>${tr(n)}</button>`).join('');
     this.q('.pp-tabs').addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (b) this.showTab(b.dataset.tab); });
     this.q('.pp-search').addEventListener('input', () => { this.query = this.q('.pp-search').value.trim().toLowerCase(); this.renderGrid(); });
     this.q('.pp-grid').addEventListener('click', (e) => this.pick(e.target.closest('[data-pick]')));
@@ -194,7 +195,7 @@ export class PaintPicker {
     this.el.querySelectorAll('.pp-tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
     const search = this.q('.pp-search');
     search.hidden = tab === 'color';
-    search.placeholder = tab === 'chameleon' ? 'Search chameleon paints' : 'Search patterns';
+    search.placeholder = tab === 'chameleon' ? tr('Search chameleon paints') : tr('Search patterns');
     this.q('.pp-mats').hidden = tab !== 'color';
     this.renderGrid();
     this.sync();
@@ -211,10 +212,10 @@ export class PaintPicker {
       const list = this.tab === 'pattern' ? cat.patterns : cat.chameleons;
       const q = this.query, hits = q ? list.filter((it) => it.name.toLowerCase().includes(q) || it.stem.includes(q)) : list;
       grid.innerHTML = hits.map((it) => {
-        const tip = esc(`${it.name}${it.game ? '' : ' (no name in the game\'s text: its file\'s)'}${it.normal ? ', with relief' : ''}`);
+        const tip = esc(`${it.name}${it.game ? '' : tr(" (no name in the game's text: its file's)")}${it.normal ? tr(', with relief') : ''}`);
         return this.tab === 'pattern'
           ? `<button data-pick="pattern" data-tex="${esc(it.tex)}" title="${tip}"><img loading="lazy" decoding="async" alt="" src="${thumbOf(it.tex)}"></button>`
-          : `<button data-pick="chameleon" data-tex="${esc(it.tex)}" title="${tip}: facing you on the left, seen edge-on on the right"><span class="pp-ramp" style="background-image:url('${thumbOf(it.tex)}')"></span><span class="pp-rn">${esc(it.name)}</span></button>`;
+          : `<button data-pick="chameleon" data-tex="${esc(it.tex)}" title="${tip}: ${tr('facing you on the left, seen edge-on on the right')}"><span class="pp-ramp" style="background-image:url('${thumbOf(it.tex)}')"></span><span class="pp-rn">${esc(it.name)}</span></button>`;
       }).join('') || `<div class="hint">No ${this.tab === 'pattern' ? 'pattern' : 'chameleon paint'} matches “${esc(q)}”.</div>`;
     }
     this.mark();
@@ -275,10 +276,10 @@ export class PaintPicker {
     }
     const l = paintLabel(v, cat);
     this.q('.pp-name').textContent = l.name;
-    this.q('.pp-kind').textContent = l.kind === 'bare' ? 'Bare: no paint on it' : l.kind;
+    this.q('.pp-kind').textContent = l.kind === 'bare' ? tr('Bare: no paint on it') : tr(l.kind);
     const tinted = !!v && v.kind !== 'color';
-    this.q('.pp-color-label').textContent = tinted ? 'Tint' : 'Colour';
-    this.q('.pp-color-row').title = tinted ? 'Tints the pattern (white: as the game has it)' : 'The paint\'s colour';
+    this.q('.pp-color-label').textContent = tinted ? tr('Tint') : tr('Colour');
+    this.q('.pp-color-row').title = tinted ? tr('Tints the pattern (white: as the game has it)') : tr("The paint's colour");
     this.q('.pp-size-row').hidden = v?.kind !== 'pattern';
     this.el.querySelectorAll('.pp-finish button').forEach((b) => b.classList.toggle('on', (b.dataset.finish || '') === (v?.finish || '')));
     if (!keepInputs) {

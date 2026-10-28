@@ -6,6 +6,7 @@
 // through https://xo.data/raw, so nothing of the game is copied into this tool. Part stats come from
 // stats.json, made from crosscalc.net's item table (the game keeps its own in encrypted files).
 import * as THREE from 'three';
+import { t as tr, typeLabel } from './i18n.js';
 
 const DATA = 'https://xo.data';
 const SVG = 'ui/textures/svg/';
@@ -187,7 +188,7 @@ export function energyBarHtml(v, { limits = true } = {}) {
 // The vehicle's stats column (parts list, builder panel). limits false (No limits): nothing red for
 // going past the game's limits (parts, energy, mass limit).
 export function vehicleStatsHtml(v, { limits = true } = {}) {
-  const row = (icon, value, label, cls = '', tip = '') => `<div class="vs-row ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${gi(icon)}<div><b>${value}</b><span>${label}</span></div></div>`;
+  const row = (icon, value, label, cls = '', tip = '') => `<div class="vs-row ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${gi(icon)}<div><b>${value}</b><span>${tr(label)}</span></div></div>`;
   const out = [];
   const armourNote = v.unknownArmour ? ` (${v.unknownArmour} armour part${v.unknownArmour > 1 ? 's' : ''} not counted: no stats for them yet)` : '';
   out.push(row('health', v.durability != null ? `${fmt(v.durability)} pts` : '—', 'Durability', '',
@@ -198,7 +199,7 @@ export function vehicleStatsHtml(v, { limits = true } = {}) {
   const massTip = v.unknown ? `${v.unknown} part${v.unknown > 1 ? 's have' : ' has'} no stats yet and ${v.unknown > 1 ? 'are' : 'is'} left out` : '';
   out.push(row('mass', `${fmt(v.mass)}${v.unknown ? '+' : ''}${v.massLimit != null ? (v.unknown ? ' / ' : '/') + fmt(v.massLimit) : ''} kg`, 'Mass', limits && v.tooHeavy ? 'bad' : '',
     [v.massLimit != null ? `Mass limit ${fmt(v.massLimit)} kg: a heavier vehicle cannot go into battle` : '', massTip].filter(Boolean).join('. ')));
-  out.push('<div class="vs-head">When driving</div>');
+  out.push('<div class="vs-head">' + tr('When driving') + '</div>');
   out.push(row('speed', v.speed != null ? `${fmt(v.speed)} km/h` : '—', v.speedCapped ? 'Top speed (slowest movement part)' : 'Top speed', '',
     v.overloaded ? 'Slower in practice: the vehicle is heavier than its tonnage' : 'Without overload'));
   if (v.tonnage != null) {
@@ -221,7 +222,7 @@ export const kindIcon = (it, path) => KIND_ICON[it?.kind] || (section(path) === 
 // The card of one part (under the cursor, or on it while placing), like the garage's tooltip.
 export function partCardHtml(name, path, it, { st = false } = {}) {
   const rows = [];
-  const add = (label, value) => rows.push(`<div class="pc-row"><span>${esc(label)}</span><b>${value}</b></div>`);
+  const add = (label, value) => rows.push(`<div class="pc-row"><span>${esc(tr(label))}</span><b>${value}</b></div>`);
   if (it) {
     if (it.kind === 'cabin') {
       add('Max. cabin speed', `${fmt(it.speed)} <small>km/h</small>`);
@@ -240,8 +241,8 @@ export function partCardHtml(name, path, it, { st = false } = {}) {
     if (it.speedLimitMul) add('Speed limit', pct(it.speedLimitMul));
     if (it.powerMul) add('Cabin power', pct(it.powerMul));
   }
-  const type = it ? (it.type || '') + (st ? ' · steering' : '') : '';
-  return `<div class="pc-head r-${esc(it?.rarity || 'none')}">${gi(kindIcon(it, path), 'pc-icon')}<div><div class="pc-name">${esc(name)}</div><div class="pc-type">${esc(type || (it ? '' : 'No stats for this part yet'))}</div></div></div>
+  const type = it ? typeLabel(it.type) + (st ? tr(' · steering') : '') : '';
+  return `<div class="pc-head r-${esc(it?.rarity || 'none')}">${gi(kindIcon(it, path), 'pc-icon')}<div><div class="pc-name">${esc(name)}</div><div class="pc-type">${esc(type || (it ? '' : tr('No stats for this part yet')))}</div></div></div>
     ${rows.length ? `<div class="pc-rows">${rows.join('')}</div>` : ''}
     ${it ? `<div class="pc-rows pc-base"><div class="pc-row">${gi('health')}<span>Durability</span><b>${fmt(it.hp || 0)} <small>pts</small></b></div>
       <div class="pc-row">${gi('mass')}<span>Mass</span><b>${fmt(it.mass || 0)} <small>kg</small></b></div></div>` : ''}
@@ -281,7 +282,7 @@ export const CONTROLS = [
 ];
 // A controls bar: [keys, label] per entry, null = line break; '+' and '-' between keys are text.
 export function keysHtml(list) {
-  return list.map((c) => (c ? `<div class="gk"><div class="gk-keys">${c[0].map((k) => (k === '+' || k === '-' ? `<span class="plus">${k === '-' ? '–' : '+'}</span>` : keycap(k))).join('')}</div><span>${esc(c[1])}</span></div>` : '<div class="gk-break"></div>')).join('');
+  return list.map((c) => (c ? `<div class="gk"><div class="gk-keys">${c[0].map((k) => (k === '+' || k === '-' ? `<span class="plus">${k === '-' ? '–' : '+'}</span>` : keycap(k))).join('')}</div><span>${esc(tr(c[1]))}</span></div>` : '<div class="gk-break"></div>')).join('');
 }
 export function controlsHtml() { return keysHtml(CONTROLS); }
 // Maps mode (mapview.js)
@@ -304,7 +305,7 @@ export function partTileHtml(p, it, name, { selected = false, loose = false, thu
   let badge = '';
   const e = it?.kind === 'cabin' || it?.kind === 'generator' ? it.power : it?.cost ? -it.cost : 0;
   if (e) badge = `<span class="pl-badge ${e > 0 ? 'pos' : 'neg'}">${e > 0 ? '+' : '−'}${Math.abs(e)}${gi('energy')}</span>`;
-  const tip = [name, it ? `${it.type || ''}${p.st ? ' · steering' : ''}` : 'no stats yet', it ? `${fmt(it.mass || 0)} kg · ${fmt(it.hp || 0)} pts` : '', loose ? 'not welded to the vehicle' : ''].filter(Boolean).join('\n');
+  const tip = [name, it ? typeLabel(it.type) + (p.st ? tr(' · steering') : '') : tr('no stats yet'), it ? `${fmt(it.mass || 0)} kg · ${fmt(it.hp || 0)} pts` : '', loose ? tr('not welded to the vehicle') : ''].filter(Boolean).join('\n');
   return `<button class="pl-tile r-${esc(it?.rarity || 'none')}${selected ? ' sel' : ''}${loose ? ' loose' : ''}" data-id="${p.id}" title="${esc(tip)}">
     ${thumb ? `<img src="${thumb}" alt="">` : gi(kindIcon(it, p.path), 'pl-ph')}
     ${p.st ? gi('steering', 'pl-st') : ''}${badge}</button>`;

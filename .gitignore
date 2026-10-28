@@ -10,3 +10,16 @@ build/
 /tools/stats/*.json
 # the screenshots' full-size originals (the README shows the JPEG copies)
 /screenshots/*.png
+# The translated name tables (parts, paints, maps, modes) are the game's own names and texts, gathered
+# from the reader's install by tools/zh_*.mjs: the game holds their copyright, as with tools/stats/*.json
+# above, so they stay out of the repository. Run the generator to make them again.
+/ui/names.zh.json
+/ui/paints.zh.json
+/ui/maps.zh.json
+/ui/modes.zh.json
+# The generators' reports (working notes: they quote the game's names too)
+/ui/names.zh.*.txt
+/ui/paints.zh.txt
+/ui/maps.zh.txt
+/ui/modes.zh.txt
+
