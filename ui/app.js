@@ -22,6 +22,9 @@ import { loadSkin, initRanges } from './skin.js';
 import { initTooltips, initSelects, ask } from './gameui.js';
 import { ShaderWarmup } from './warmup.js';
 import { PaintPicker, paintCatalog, normPaint, paintForFile, paintLabel, thumbOf } from './paints.js';
+// (i18n: the interface's translations. t is imported as tr, so a local `t` (a timer, a count) in this
+// file keeps meaning what it did)
+import { t as tr, tLines as trLines, applyStatic, setLang, pickLang, getLang, LANG_NAMES } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const DATA = 'https://xo.data';
@@ -75,7 +78,7 @@ const CAT_UI = {
   Other: { label: 'Other', icon: 'icn_cubes_parts', tip: 'Everything else among the models' },
   'Map props': { label: 'Map props', icon: 'module/icn_decoration', tip: 'The maps\' props: buildings, rocks, trees, vehicles…' },
 };
-const catLabel = (c) => CAT_UI[c]?.label || c;
+const catLabel = (c) => tr(CAT_UI[c]?.label || c);
 const state = {
   view: 'part', mode: 'parts', cat: 'Cabins', sub: null, catOpen: 'Cabins', query: '',
   files: [], folders: new Map(), catCounts: {}, expanded: new Set(), collapsed: new Set(), fileSel: null,
@@ -170,6 +173,7 @@ function countSubs() {
 // ---- small helpers ----------------------------------------------------------------------------
 let statusTimer = 0;
 function status(text, error = false, sticky = false) {
+  text = text ? tr(text) : ''; // (the dictionary holds the whole sentence: one place to translate them all)
   const el = $('statusText');
   el.textContent = text || '';
   el.title = text || '';
@@ -181,7 +185,7 @@ let busyCount = 0, loadCount = 0, loadShown = false, loadTimer = 0;
 const showBusy = () => { $('busy').hidden = busyCount === 0 && !loadShown; };
 function busy(on, text) {
   busyCount = Math.max(0, busyCount + (on ? 1 : -1));
-  if (on && text) $('busyText').textContent = text;
+  if (on && text) $('busyText').textContent = tr(text);
   showBusy();
 }
 // Opening a part: the pill only shows when it takes a while (most parts open in a fraction of a
@@ -191,8 +195,8 @@ function loading(on, text) {
   state.loading = loadCount;
   if (on) {
     state.loadText = text;
-    if (loadShown) $('busyText').textContent = text;
-    else if (!loadTimer) loadTimer = setTimeout(() => { loadTimer = 0; if (loadCount) { loadShown = true; $('busyText').textContent = state.loadText; showBusy(); } }, 250);
+    if (loadShown) $('busyText').textContent = tr(text);
+    else if (!loadTimer) loadTimer = setTimeout(() => { loadTimer = 0; if (loadCount) { loadShown = true; $('busyText').textContent = tr(state.loadText); showBusy(); } }, 250);
   }
   if (!loadCount) { clearTimeout(loadTimer); loadTimer = 0; loadShown = false; showBusy(); }
 }
@@ -371,18 +375,18 @@ function showGame(g) {
   $('gameDot').className = 'dot ' + (g.ok ? 'ok' : 'err');
   // (the folder's name alone: its full path holds the Windows user's name, so it is only in the tooltip
   // and a screenshot of the app shows no one's name)
-  $('gameLabel').textContent = g.ok ? g.root.split(/[\\/]/).filter(Boolean).pop() || g.root : g.error || 'Crossout not found';
-  $('gameBtn').title = g.ok ? `Crossout game folder: ${g.root}\nGame data: ${g.dataDir}\n${g.packs} archives, ${g.files.toLocaleString()} files (read-only). Click to choose another folder.` : 'Choose the Crossout folder';
-  $('statusRight').textContent = g.ok ? `${g.files.toLocaleString()} files in ${g.packs} archives${g.gameVersion ? ' · Crossout ' + g.gameVersion : ''}` : '';
+  $('gameLabel').textContent = g.ok ? g.root.split(/[\\/]/).filter(Boolean).pop() || g.root : tr(g.error || 'Crossout not found');
+  $('gameBtn').title = g.ok ? trLines([`Crossout game folder: ${g.root}`, `Game data: ${g.dataDir}`, `${g.packs} archives, ${g.files.toLocaleString()} files (read-only). Click to choose another folder.`]) : tr('Choose the Crossout folder');
+  $('statusRight').textContent = g.ok ? tr('{files} files in {packs} archives{v}', { files: g.files.toLocaleString(), packs: g.packs, v: g.gameVersion ? tr(' · Crossout {v}', { v: g.gameVersion }) : '' }) : '';
   // the version beside the folder: which Crossout the parts come from ("2.40.10.361437 (661aac453)")
   const ver = $('gameVer'), [num] = (g.gameVersion || '').split(' ');
   ver.hidden = !g.ok;
   ver.classList.toggle('unknown', !num);
-  ver.textContent = num ? `Crossout ${num}` : 'version unknown';
-  ver.title = num ? `The Crossout version loaded: ${g.gameVersion}\n(read from bin\\win64\\Crossout.exe in ${g.root}). Exports note it in the file.`
-    : `No Crossout.exe with a version in ${g.root}\\bin\\win64 (a copied data folder?)`;
+  ver.textContent = num ? tr('Crossout {n}', { n: num }) : tr('version unknown');
+  ver.title = num ? trLines([`The Crossout version loaded: ${g.gameVersion}`, `(read from bin\\win64\\Crossout.exe in ${g.root}). Exports note it in the file.`])
+    : tr('No Crossout.exe with a version in {dir}\\bin\\win64 (a copied data folder?)', { dir: g.root });
   $('gameDialog').hidden = g.ok;
-  if (!g.ok) $('gameDialogText').textContent = g.error || 'Crossout was not found automatically.';
+  if (!g.ok) $('gameDialogText').textContent = tr(g.error || 'Crossout was not found automatically.');
   if (g.warnings?.length) status(g.warnings[0], false, true);
 }
 
@@ -421,12 +425,13 @@ async function loadFiles() {
     state.folders = folders;
     state.catCounts = counts;
     state.paintCatalog = paintCatalog(files.map((f) => f.name)); // (the game's paints: paints.js)
+    applyPaintZh(); // (the Chinese names of the paints, from ui\\paints.zh.json)
     viewPicker.refresh();
     buildPicker.refresh();
     state.subCounts = null; // (counted again for these folders)
     renderCats();
     rebuildRows();
-    status(`${files.length.toLocaleString()} files, ${[...folders.values()].reduce((a, f) => a + f.models.length, 0).toLocaleString()} models`);
+    status(tr('{files} files, {models} models', { files: files.length.toLocaleString(), models: [...folders.values()].reduce((a, f) => a + f.models.length, 0).toLocaleString() }));
   } catch (e) {
     status(e.message, true);
   } finally {
@@ -448,11 +453,11 @@ function renderCats() {
     const kind = c === state.cat && state.sub && !open ? subs.find((x) => x.s === state.sub) : null;
     const n = kind ? kind.n : hits ? hits[c] || 0 : state.catCounts[c] || 0;
     const row = `<div class="cat-row${c === state.cat ? ' on' : ''}${open ? ' open' : ''}${hits && !n ? ' none' : ''}">`
-      + `<button class="cat" data-cat="${c}" title="${esc(ui.tip)}"><i class="gi" data-gi="${ui.icon}"></i><span class="lbl">${esc(ui.label)}${kind ? `<small> · ${esc(kind.s)}</small>` : ''}</span><span class="n${hits ? ' hit' : ''}">${n.toLocaleString()}</span></button>`
-      + (subs.length > 1 ? `<button class="more" data-more="${c}" aria-expanded="${open}" title="${open ? 'Hide' : 'Show'} its kinds">${CHEVRON}</button>` : '<span class="more"></span>')
+      + `<button class="cat" data-cat="${c}" title="${esc(tr(ui.tip))}"><i class="gi" data-gi="${ui.icon}"></i><span class="lbl">${esc(tr(ui.label))}${kind ? `<small> · ${esc(kind.s)}</small>` : ''}</span><span class="n${hits ? ' hit' : ''}">${n.toLocaleString()}</span></button>`
+      + (subs.length > 1 ? `<button class="more" data-more="${c}" aria-expanded="${open}" title="${open ? tr('Hide') : tr('Show')} its kinds">${CHEVRON}</button>` : '<span class="more"></span>')
       + '</div>';
     if (!open) return row;
-    return row + `<div class="cat-subs">${subs.map((x) => `<button class="sub${c === state.cat && state.sub === x.s ? ' on' : ''}${hits && !x.n ? ' none' : ''}" data-parent="${c}" data-sub="${esc(x.s)}" title="${esc(ui.label)}: ${esc(x.s)}"><span class="lbl">${esc(x.s)}</span><span class="n${hits ? ' hit' : ''}">${x.n.toLocaleString()}</span></button>`).join('')}</div>`;
+    return row + `<div class="cat-subs">${subs.map((x) => `<button class="sub${c === state.cat && state.sub === x.s ? ' on' : ''}${hits && !x.n ? ' none' : ''}" data-parent="${c}" data-sub="${esc(x.s)}" title="${esc(tr(ui.label))}: ${esc(tr(x.s))}"><span class="lbl">${esc(tr(x.s))}</span><span class="n${hits ? ' hit' : ''}">${x.n.toLocaleString()}</span></button>`).join('')}</div>`;
   }).join('');
   hydrateIcons($('cats'));
 }
@@ -460,17 +465,108 @@ function renderCats() {
 // ---- part names: the in-game names from names.json, or the user's own ----
 // builtin: model path -> { name, confidence }; folders: titles of folders that hold several different
 // parts; mains: the model a folder opens with when the file-name rule would pick an outdated one.
-const names = { builtin: {}, user: {}, folders: {}, mains: {}, gen: 0 };
+const names = { builtin: {}, user: {}, folders: {}, mains: {}, zh: null, gen: 0 };
 async function loadNames() {
   let doc = {};
   try { doc = await (await fetch('names.json', { cache: 'no-store' })).json(); } catch { /* no names */ }
   names.builtin = doc.parts || {};
   names.folders = doc.folders || {};
   names.mains = doc.mains || {};
+  await loadZhNames();
+  await loadPaintZh();
+  await loadMapZh();
+  await loadModesZh();
   names.user = { ...(state.settings.partNames || {}) };
   names.gen++;
 }
-function partName(path) { return names.user[path] || names.builtin[path]?.name || null; }
+// Chinese part names: an optional layer over the English ones (names.zh.json, a plain file in ui\:
+// edit it, click the button in the top bar, and the new names are there: no rebuild, no restart).
+// Every entry is optional; no file at all is fine too.
+async function loadZhNames() {
+  names.zh = null;
+  try {
+    const z = await (await fetch('names.zh.json', { cache: 'no-store' })).json();
+    names.zh = { parts: z.parts || {}, dirs: z.dirs || {}, folders: z.folders || {} };
+  } catch { /* English names only */ }
+}
+
+// 喷漆的中文名：又一层（paints.zh.json）。图鉴里的「图案」就是游戏里的喷漆，
+// 只收能在游戏本地化表里找到对应键的那部分；没有的保持英文（名字只在加密数据里）。
+let paintZh = null;
+async function loadPaintZh() {
+  paintZh = null;
+  try {
+    const z = await (await fetch('paints.zh.json', { cache: 'no-store' })).json();
+    paintZh = { patterns: z.patterns || {}, chameleons: z.chameleons || {} };
+  } catch { /* English names only */ }
+}
+// 地图的中文名（maps.zh.json）：levels/maps 下的文件夹名 → 官方 MAP_TITLE_* 的中文。
+// 与部件名同一个开关：关掉顶栏的「中文名」，地图名也一起回到英文。
+let mapsZh = null;
+async function loadMapZh() {
+  mapsZh = null;
+  try {
+    const z = await (await fetch('maps.zh.json', { cache: 'no-store' })).json();
+    mapsZh = z.maps || {};
+  } catch { /* 只有英文地图名 */ }
+}
+
+// 游戏模式与节日的中文名（modes.zh.json）：场景里 GameplaysList / FestivalsList 的标识 → 官方文本。
+let modesZh = null;
+async function loadModesZh() {
+  modesZh = null;
+  try {
+    const z = await (await fetch('modes.zh.json', { cache: 'no-store' })).json();
+    modesZh = { gameplays: z.gameplays || {}, festivals: z.festivals || {} };
+  } catch { /* 只有英文模式名 */ }
+}
+// 一个模式标识 → 显示名：有中文用中文，否则上游的写法（下划线换空格）
+function modeName(id) {
+  if (!id) return tr('Any');
+  const cn = wantZh() && modesZh && modesZh.gameplays[id];
+  return cn || id.replace(/_/g, ' ');
+}
+// 一个节日标识 → 显示名（Empty 上游写作 None）
+function festivalName(id) {
+  if (id === 'Empty') return tr('None');
+  const cn = wantZh() && modesZh && modesZh.festivals[id];
+  return cn || id;
+}
+function applyPaintZh() {
+  const c = state.paintCatalog;
+  if (!c) return;
+  const on = wantZh();
+  for (const [key, list] of [['patterns', c.patterns], ['chameleons', c.chameleons]]) {
+    const zh = paintZh && paintZh[key];
+    for (const it of list) {
+      if (!it.en) { it.en = it.name; it.game0 = !!it.game; } // (the English name and whether the game itself has one)
+      const cn = on && zh ? zh[it.stem] : '';
+      it.name = cn || it.en;
+      it.game = it.game0 || !!cn; // (a name the game has: no "file name only" note)
+    }
+  }
+}
+// Show the Chinese names? A setting of its own: the interface's language and the parts' names are
+// two different wishes (an English UI with Chinese part names is a normal one).
+// (on by default when names.zh.json is there: this build is for a Chinese reader; the button turns it off
+// and the choice is kept)
+const wantZh = () => state.settings.zhNames !== false && !!names.zh;
+// The Chinese name of a model path: its own entry, else its folder's (a part's skins, drones and
+// pieces are separate files that share one name: writing the folder once covers them all).
+function zhName(path) {
+  const z = names.zh;
+  if (!z) return null;
+  if (z.parts[path]) return z.parts[path];
+  for (let d = dirOf(path), i = 0; d && i < 6; i++) {
+    if (z.dirs[d]) return z.dirs[d];
+    const cut = d.lastIndexOf('/');
+    if (cut < 0) break;
+    d = d.slice(0, cut);
+  }
+  return null;
+}
+// Your own name > the Chinese name > the game's English name > the file name.
+function partName(path) { return names.user[path] || (wantZh() && zhName(path)) || names.builtin[path]?.name || null; }
 function nameOrFile(path) { return partName(path) || stem(path); }
 const plainName = (n) => n.replace(/ (·|\().*$/, ''); // "Ghost", not "Ghost (before 2021)" or "Ghost · kit"
 // A folder row: the part's plain name. A folder of several different parts (not just one part's
@@ -479,6 +575,7 @@ const plainName = (n) => n.replace(/ (·|\().*$/, ''); // "Ghost", not "Ghost (b
 function folderName(f) {
   if (f.labelGen === names.gen) return f.label;
   f.labelGen = names.gen;
+  if (wantZh() && names.zh?.folders[f.dir]) return (f.label = names.zh.folders[f.dir]);
   if (names.folders[f.dir]) return (f.label = names.folders[f.dir]);
   const all = new Set(f.models.map(partName).filter(Boolean));
   if (all.size === 1) return (f.label = [...all][0]);
@@ -494,12 +591,61 @@ function folderName(f) {
 }
 function setPartName(path, name) {
   name = (name || '').trim();
-  if (name && name !== names.builtin[path]?.name) names.user[path] = name; else delete names.user[path];
+  const base = (wantZh() && zhName(path)) || names.builtin[path]?.name; // (the name before any of yours)
+  if (name && name !== base) names.user[path] = name; else delete names.user[path];
   names.gen++;
   call('setSettings', { partNames: names.user }).catch(() => {});
   rebuildRows();
   if (state.info?.path === path) renderInspector();
   renderBuildPanel();
+}
+
+// The Chinese part names on or off (the button in the top bar). Kept in the settings, like the rest.
+function syncZhBtn() {
+  const b = $('zhNamesBtn'), on = wantZh();
+  b.textContent = on ? tr('Chinese names: on') : tr('Chinese names: off');
+  b.disabled = !names.zh;
+  b.title = names.zh
+    ? [on ? tr('Chinese part names: on') : tr('Chinese part names: off'),
+       tr('The names come from ui\\names.zh.json; a part it does not list keeps its English name.'),
+       tr('Click to switch.')].join('\n')
+    : tr('No ui\\names.zh.json: drop one in and the parts get Chinese names.');
+}
+function setZhNames(on) {
+  state.settings.zhNames = !!on;
+  call('setSettings', { zhNames: state.settings.zhNames }).catch(() => {});
+  names.gen++; // (folder titles are cached by it: they change with the names)
+  syncZhBtn();
+  rebuildRows();
+  if (state.info) renderInspector();
+  renderBuildPanel();
+  applyPaintZh(); // (the paints follow the same switch)
+  renderMapList(); // (the maps' names follow it too: the list is built once, so build it again)
+  if (state.view === 'map') renderMapPanel(); // (the mode and festival menus follow it as well)
+  viewPicker.refresh();
+  buildPicker.refresh();
+}
+
+// ---- 界面语言 (the language button in the top bar) -----------------------------------------------
+function syncLangBtn() {
+  const b = $('langBtn');
+  b.textContent = getLang() === 'zh' ? '中文' : 'EN';
+  b.title = [tr('Interface language: {name}', { name: LANG_NAMES[getLang()] }),
+             ...(getLang() === 'en' ? [] : [`Interface language: ${LANG_NAMES[getLang()]}`]),
+             tr('Click to switch.')].join('\n');
+}
+// Switches the whole interface: the static chrome (i18n's walk over index.html), then everything the
+// code builds (the parts list, the inspector, the build panel) is drawn again through t().
+function setUiLang(l) {
+  state.settings.uiLang = setLang(l);
+  call('setSettings', { uiLang: state.settings.uiLang }).catch(() => {});
+  applyStatic(document.body, hydrateIcons);
+  syncLangBtn();
+  syncZhBtn(); // (its label and tooltip are words too: they follow the interface's language)
+  rebuildRows();
+  if (state.info) renderInspector();
+  renderBuildPanel();
+  syncMapView?.();
 }
 
 function rebuildRows() {
@@ -514,7 +660,13 @@ function rebuildRows() {
     const folders = [...state.folders.values()].filter((f) => (state.cat === 'All' ? f.cat !== 'Map props' || q : f.cat === state.cat && (!state.sub || subOf(f) === state.sub)));
     const label = (f) => (folderName(f) || f.name).toLowerCase();
     folders.sort((a, b) => label(a).localeCompare(label(b)) || a.dir.localeCompare(b.dir));
-    const matches = (m) => m.includes(q) || (partName(m) || '').toLowerCase().includes(q);
+    // (the Chinese name too, even while it is not shown; and the English name even while Chinese is:
+    // typing "scorpion" should find 天蝎)
+    const matches = (m) => m.includes(q)
+      || (partName(m) || '').toLowerCase().includes(q)
+      || (zhName(m) || '').includes(q)
+      || (names.builtin[m]?.name || '').toLowerCase().includes(q)
+      || (names.user[m] || '').toLowerCase().includes(q);
     const folderHit = (f) => f.dir.includes(q) || label(f).includes(q); // (its title too: "Lightweight frames")
     // matches in every category, for the pills and for a search that finds nothing here
     state.catHits = null;
@@ -584,9 +736,14 @@ function renderList() {
   if (state.mode !== 'parts' || !rows.length) list.style.height = rows.length * ROW + 'px';
   if (!rows.length) {
     const elsewhere = state.mode !== 'files' && state.catHits ? CATS.filter((c) => (c !== state.cat || state.sub) && c !== 'All' && state.catHits[c]) : []; // (a kind picked: its category's other kinds too)
-    list.innerHTML = `<div class="list-empty">${!state.files.length ? 'No game data loaded.'
-      : elsewhere.length ? `Nothing in ${esc(catLabel(state.cat))}${state.sub ? ` (${esc(state.sub)})` : ''}. Found in: ${elsewhere.map((c) => `<a data-go-cat="${c}">${esc(catLabel(c))} (${state.catHits[c]})</a>`).join(', ')}`
-      : 'Nothing matches.'}</div>`;
+    let msg;
+    if (!state.files.length) msg = tr('No game data loaded.');
+    else if (!elsewhere.length) msg = tr('Nothing matches.');
+    else {
+      const where = elsewhere.map((c) => `<a data-go-cat="${c}">${esc(catLabel(c))} (${state.catHits[c]})</a>`).join(', ');
+      msg = tr('Nothing in {cat}{sub}. Found in: {where}', { cat: esc(catLabel(state.cat)), sub: state.sub ? ` (${esc(state.sub)})` : '', where });
+    }
+    list.innerHTML = `<div class="list-empty">${msg}</div>`;
     return;
   }
   if (state.mode === 'parts') { renderCards(wrap, list); return; }
@@ -1119,12 +1276,12 @@ async function openModel(path, { skin = '', lod = 0, keepCamera = false, assembl
     renderViewTools();
     renderInspector();
     for (const [base, rep] of Object.entries(state.replace)) viewer.setReplacement(base, { id: rep.id });
-    status(`${nameOrFile(info.path)}: ${first.tris.toLocaleString()} triangles, ${first.meshes} mesh(es) in LOD ${state.lod}`);
+    status(tr('{name}: {t} triangles, {m} mesh(es) in LOD {lod}', { name: nameOrFile(info.path), t: first.tris.toLocaleString(), m: first.meshes, lod: state.lod }));
     const stats = await loaded; // (its textures in: only the status line still waits for them)
     if (token !== loadToken || !stats) return true;
     state.stats = stats;
-    const warn = stats.errors?.length ? ` · ${stats.errors.length} texture(s) failed: ${stats.errors[0]}` : '';
-    status(`${nameOrFile(info.path)}: ${stats.tris.toLocaleString()} triangles, ${stats.meshes} mesh(es) in LOD ${state.lod}${warn}`, !!warn);
+    const warn = stats.errors?.length ? tr(' · {n} texture(s) failed: {first}', { n: stats.errors.length, first: stats.errors[0] }) : '';
+    status(tr('{name}: {t} triangles, {m} mesh(es) in LOD {lod}{warn}', { name: nameOrFile(info.path), t: stats.tris.toLocaleString(), m: stats.meshes, lod: state.lod, warn }), !!warn);
     return true;
   } catch (e) {
     if (token === loadToken) {
@@ -1166,12 +1323,12 @@ function renderAnimCard() {
   if (!a) return;
   const acts = a.activities();
   const dup = (act) => acts.filter((x) => x.activity === act).length > 1;
-  $('animSel').innerHTML = '<option value="">Still</option>' +
-    acts.map((l) => `<option value="${esc(l.name)}" ${l.name === a.active ? 'selected' : ''}>${esc(l.label || prettyName(l.activity))}${dup(l.activity) ? ' · ' + esc(l.name) : ''}</option>`).join('');
-  $('animPlay').textContent = a.playing ? 'Pause' : 'Play';
+  $('animSel').innerHTML = `<option value="">${tr('Still')}</option>` +
+    acts.map((l) => `<option value="${esc(l.name)}" ${l.name === a.active ? 'selected' : ''}>${esc(tr(l.label || prettyName(l.activity)))}${dup(l.activity) ? ' · ' + esc(l.name) : ''}</option>`).join('');
+  $('animPlay').textContent = a.playing ? tr('Pause') : tr('Play');
   $('animSpeed').value = String(a.speed);
   const poses = a.poses();
-  $('animPoses').innerHTML = poses.map((p) => `<div class="ar"><span title="${esc(p.name)}">${esc(prettyName(p.name))}</span>
+  $('animPoses').innerHTML = poses.map((p) => `<div class="ar"><span title="${esc(p.name)}">${esc(tr(prettyName(p.name)))}</span>
     <input type="range" data-pose="${esc(p.name)}" min="${p.min}" max="${p.max}" step="any" value="${p.value}"><span class="val">${fmtPose(p, p.value)}</span></div>`).join('');
   $('animSweepWrap').hidden = !poses.length;
   $('animSweep').checked = a.sweep;
@@ -1246,7 +1403,7 @@ function showEvery() {
   for (const id of EVERY) if (document.activeElement !== $(id)) $(id).value = fireEvery() ? String(fireEvery()) : '';
   // (empty: the 3D Viewer's says what its gun does then)
   const r = viewer.reloadOf(state.info?.path);
-  $('fxEvery').placeholder = r >= 1 ? `game: ${r}` : 'own pace';
+  $('fxEvery').placeholder = r >= 1 ? tr('game: {r}', { r }) : tr('own pace');
 }
 for (const id of EVERY) {
   $(id).addEventListener('change', () => {
@@ -1256,7 +1413,7 @@ for (const id of EVERY) {
     showEvery();
     state.animator?.restartFire(); // (the next shot at once, then on the new beat)
     call('setSettings', { fireEvery: state.settings.fireEvery }).catch(() => {});
-    status(fireEvery() ? `A shot every ${fireEvery()} s` : 'Each gun fires as in the game again: once per its reload time');
+    status(fireEvery() ? tr('A shot every {s} s', { s: fireEvery() }) : 'Each gun fires as in the game again: once per its reload time');
   });
 }
 // Shots hit: the training target that far down-range (stood there while a Fire activity is picked),
@@ -1289,8 +1446,8 @@ function renderFxRow(a) {
   if (!guns) { $('fxTargetRow').hidden = $('fxEveryRow').hidden = true; $('fxSoundRow').hidden = !(a && meleeSound(info?.path)); if (!$('fxSoundRow').hidden) { viewer.sounds.setVolume(fxVolume()); showVolume(); } return; }
   const pick = fxPickOf(info.path), auto = muzzleFor(info.path);
   state.fxChoices ||= muzzleChoices(state.files.map((f) => f.name));
-  $('fxSel').innerHTML = `<option value="">${auto ? 'Matched: ' + esc(fxShort(auto)) : 'Matched: none'}</option><option value="off">Off</option>`
-    + `<optgroup label="All muzzle effects">${state.fxChoices.map((c) => `<option value="${esc(c)}">${esc(fxShort(c))}</option>`).join('')}</optgroup>`;
+  $('fxSel').innerHTML = `<option value="">${auto ? tr('Matched: {name}', { name: esc(fxShort(auto)) }) : tr('Matched: none')}</option><option value="off">${tr('Off')}</option>`
+    + `<optgroup label="${tr('All muzzle effects')}">${state.fxChoices.map((c) => `<option value="${esc(c)}">${esc(fxShort(c))}</option>`).join('')}</optgroup>`;
   $('fxSel').value = pick;
   $('fxTargetRow').hidden = !viewer.shotFor(info.path);
   $('fxEveryRow').hidden = false;
@@ -1360,7 +1517,7 @@ viewer.frameHooks.push(() => {
 
 function renderViewTools() {
   const info = state.info;
-  $('lodSel').innerHTML = Array.from({ length: info.lodCount }, (_, i) => `<option value="${i}" ${i === state.lod ? 'selected' : ''}>${i}${i === 0 ? ' (best)' : ''}</option>`).join('');
+  $('lodSel').innerHTML = Array.from({ length: info.lodCount }, (_, i) => `<option value="${i}" ${i === state.lod ? 'selected' : ''}>${i === 0 ? tr('{n} (best)', { n: i }) : i === info.lodCount - 1 && info.lodCount > 1 ? tr('{n} (lowest)', { n: i }) : i}</option>`).join('');
   const skins = info.skins.filter((s) => s.exists).map((s) => s.name);
   // (skins without a "default" entry: the look on screen is a choice too, or the menu showed the
   // first skin while the own look was on, and there was no way back to it)
@@ -1518,7 +1675,11 @@ function renderInspector() {
   $('mName').textContent = nm || info.name;
   $('mName').closest('.card').className = 'card r-' + (partStats.item(info.path)?.rarity || 'none'); // (the part's rarity, as its card on the left)
   const b = names.builtin[info.path];
-  $('mName').title = names.user[info.path] ? 'Your name for this part' : b ? `In-game name${b.confidence && b.confidence !== 'high' ? ' (best match, not fully certain)' : ''}` : 'File name (no in-game name known yet: ✎ to name it)';
+  const zh = wantZh() && zhName(info.path);
+  $('mName').title = names.user[info.path] ? tr('Your name for this part')
+    : zh ? tr('Chinese name (from ui\\names.zh.json)')
+    : b ? tr('In-game name') + (b.confidence && b.confidence !== 'high' ? tr(' (best match, not fully certain)') : '')
+    : tr('File name (no in-game name known yet: ✎ to name it)');
   $('mFile').hidden = !nm;
   // (shown with what the game puts on its nodes: say so, and how to see it alone)
   const withList = state.assembled ? [...new Set(state.assembly.map((a) => a.path))].map((p) => {
@@ -1526,8 +1687,8 @@ function renderInspector() {
     return `${k > 1 ? k + ' × ' : ''}${esc(partName(p) || stem(p))}`;
   }).join(', ') : '';
   $('mWith').hidden = !withList;
-  $('mWith').innerHTML = withList ? `With ${withList} in place, as in the game. <a data-alone="1">Show it alone</a>` : '';
-  $('mFile').textContent = nm ? `file: ${info.name}` : '';
+  $('mWith').innerHTML = withList ? tr('With {list} in place, as in the game. <a data-alone="1">Show it alone</a>', { list: withList }) : '';
+  $('mFile').textContent = nm ? tr('file: {name}', { name: info.name }) : '';
   $('mNameEdit').hidden = true;
   $('mPath').innerHTML = esc(info.path).replace(/\//g, '/<wbr>'); // (broken after a slash, not inside a name)
   const size = info.bbMax.map((v, i) => v - info.bbMin[i]);
@@ -1535,16 +1696,16 @@ function renderInspector() {
   const fmt = [...new Set(info.meshes.filter((m) => m.lod === state.lod).map((m) => (m.halfPositions ? 'half' : 'float') + (m.skinned ? ', skinned' : '')))].join(' / ');
   const used = usedMaterials();
   const rows = [
-    ['Triangles (LOD ' + state.lod + ')', lodTris.toLocaleString()],
-    ['Vertices', st ? st.verts.toLocaleString() : ''],
-    ['LODs', info.lodCount],
-    ['Materials', used.length + (info.materials.length > used.length ? ` of ${info.materials.length}` : '')],
-    ['Size (m)', size.map((v) => v.toFixed(2)).join(' × ')],
-    ['Size (build cells)', size.map((v) => Math.max(1, Math.round(v / CELL))).join(' × ')],
-    ['Weld points', info.slots.length],
-    ['Pivots / bones', info.nodes.length],
-    ['Skins', info.skins.length ? info.skins.map((s) => s.name).join(', ') : 'default'],
-    ['Vertex format', fmt],
+    [tr('Triangles (LOD {n})', { n: state.lod }), lodTris.toLocaleString()],
+    [tr('Vertices'), st ? st.verts.toLocaleString() : ''],
+    [tr('LODs'), info.lodCount],
+    [tr('Materials'), used.length + (info.materials.length > used.length ? tr(' of {n}', { n: info.materials.length }) : '')],
+    [tr('Size (m)'), size.map((v) => v.toFixed(2)).join(' × ')],
+    [tr('Size (build cells)'), size.map((v) => Math.max(1, Math.round(v / CELL))).join(' × ')],
+    [tr('Weld points'), info.slots.length],
+    [tr('Pivots / bones'), info.nodes.length],
+    [tr('Skins'), info.skins.length ? info.skins.map((s) => s.name).join(', ') : tr('default')],
+    [tr('Vertex format'), fmt],
   ];
   $('mStats').innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
   $('mWarnings').innerHTML = (info.warnings || []).map((w) => `<div><i class="gi" data-gi="icn_attention"></i>${esc(w)}</div>`).join('');
@@ -1555,6 +1716,7 @@ function renderInspector() {
 
 const ROLE_ORDER = ['albedo', 'normal', 'gloss', 'emissive', 'ao', 'detail', 'colormap', 'albedo2'];
 const ROLE_LABEL = { albedo: 'Albedo', normal: 'Normal', gloss: 'Gloss / paint mask', emissive: 'Emissive / glow', ao: 'Occlusion', detail: 'Detail normal', colormap: 'Colour map', albedo2: 'Albedo layer 2' };
+const roleLabel = (r) => tr(ROLE_LABEL[r] || r);
 const LAMP_LABEL = { DiffuseSampler: 'Glow · diffuse', ColormapSampler: 'Glow · colour map', MaterialLayers0: 'Glow · layer 1', MaterialLayers1: 'Glow · layer 2' }; // (multiplied: either can be the colour or the mask)
 const THUMB_VIEW = { albedo: 'opaque', albedo2: 'opaque', normal: 'normal' };
 const roleRank = (r) => { const i = ROLE_ORDER.indexOf(r); return i < 0 ? 99 : i; };
@@ -1574,7 +1736,7 @@ function renderMaterials() {
     const texs = [...m.textures].sort((a, b) => roleRank(a.role) - roleRank(b.role));
     // (glow shaders: a glow laid over the part, its two textures multiplied; see viewer.js LAMP_VERT)
     const lamp = Viewer.isLamp(m);
-    const label = (t) => (lamp && LAMP_LABEL[t.param]) || ROLE_LABEL[t.role] || t.role;
+    const label = (t) => tr((lamp && LAMP_LABEL[t.param]) || ROLE_LABEL[t.role] || t.role);
     html.push(`<div class="mat${viewer.partSel === mi ? ' sel' : ''}" data-mat="${mi}"><div class="mat-head" title="Show where it is on the part (a click on the part does the same)"><b>Material ${mi}</b>${m.alphaTest ? ' · alpha test' : ''}${lamp ? (m.glow.additive === false ? ' · <span title="A see-through marker drawn over the part (its textures\' alpha)">see-through layer</span>' : ' · <span title="Light added onto the part: its two glow textures multiplied (black shows nothing)">glow layer</span>') : ''}</div>`);
     if (!texs.length) html.push('<div class="hint">No textures.</div>');
     for (const t of texs) {
@@ -2032,12 +2194,12 @@ function renderBuildPanel() {
   if (state.view !== 'build') return;
   const st = build.stats();
   $('buildEmpty').hidden = st.parts > 0 || !!build.placing || !!state.restoring || state.loadingBuild > 0;
-  if (document.activeElement !== $('bName')) $('bName').value = build.name;
+  if (document.activeElement !== $('bName')) $('bName').value = build.name === 'My build' ? tr('My build') : build.name; // (the default name is data: only its look is translated)
   $('bStats').innerHTML = [
-    ['Parts', st.parts],
-    ['Triangles', st.tris.toLocaleString()],
-    ['Size (m)', st.size.map((v) => v.toFixed(2)).join(' × ')],
-    ['Size (cells)', st.size.map((v) => Math.round(v / CELL)).join(' × ')],
+    [tr('Parts'), st.parts],
+    [tr('Triangles'), st.tris.toLocaleString()],
+    [tr('Size (m)'), st.size.map((v) => v.toFixed(2)).join(' × ')],
+    [tr('Size (cells)'), st.size.map((v) => Math.round(v / CELL)).join(' × ')],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const comps = st.parts ? build.components({ all: true }) : []; // (parts on the cursor where they were)
   const cabin = build.instances.some((i) => build.isCabin(i.path));
@@ -2098,7 +2260,7 @@ state.checklist = []; // { name, count, st, done } (done: ticked by hand, for na
 let nameIdx = null, nameIdxGen = -1;
 function nameIndex() {
   if (nameIdxGen !== names.gen) {
-    const paths = new Set([...Object.keys(names.builtin), ...Object.keys(names.user)]);
+    const paths = new Set([...Object.keys(names.builtin), ...Object.keys(names.user), ...Object.keys(names.zh?.parts || {})]); // (a part named only in names.zh.json is still a part: a pasted Chinese line finds it)
     nameIdx = new NameIndex([...paths].map((p) => [p, partName(p)]));
     nameIdxGen = names.gen;
   }
@@ -2137,8 +2299,8 @@ function renderChecklist() {
     return `<div class="ck-row go ${cls}" data-k="${k}" title="Put ${esc(shown)} on the cursor"><span class="cq">${c.placed}/${it.count}</span>` +
       `<span class="cn">${esc(shown)}${c.guessed ? `<span class="cs">you wrote “${esc(it.name)}”</span>` : ''}</span><button class="cgo" data-go="${k}" tabindex="-1">Place</button></div>`;
   }).join('');
-  $('ckCount').textContent = list.length ? `(${have} of ${need} placed)` : '';
-  $('ckSummary').textContent = list.length ? 'Edit the list' : 'Type or paste the parts';
+  $('ckCount').textContent = list.length ? tr('({have} of {need} placed)', { have, need }) : '';
+  $('ckSummary').textContent = list.length ? tr('Edit the list') : tr('Type or paste the parts');
 }
 $('ckApply').addEventListener('click', () => {
   state.checklist = parseList($('ckText').value);
@@ -2743,7 +2905,9 @@ async function restoreJob() {
 }
 
 // ---- Maps ----------------------------------------------------------------------------------------
-const mapTitle = (name) => name.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+// 文件夹名 → 显示名：上游的英文写法（下划线换空格、首字母大写），有中文名时用中文
+const mapTitleEn = (name) => name.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+const mapTitle = (name) => (wantZh() && mapsZh && mapsZh[name]) || mapTitleEn(name);
 
 // (opened with a map at once, as Test drive does, the list waits behind the map's own files; it
 // says so meanwhile, and asks again if it fails)
@@ -2770,8 +2934,10 @@ const revealMapSel = () => $('mapList').querySelector('.map-row.sel')?.scrollInt
 function renderMapList() {
   const all = state.map.list || [];
   const q = state.map.query.trim().toLowerCase();
-  const list = all.filter((m) => !q || m.name.includes(q.replace(/ /g, '_')) || mapTitle(m.name).toLowerCase().includes(q));
-  const size = (m) => (m.terrain ? `${Math.round(m.sizeX)} × ${Math.round(m.sizeZ)} m` : 'no terrain');
+  // (中文名开着的时候英文也要搜得到：两种写法都比一遍)
+  const list = all.filter((m) => !q || m.name.includes(q.replace(/ /g, '_'))
+    || mapTitleEn(m.name).toLowerCase().includes(q) || mapTitle(m.name).toLowerCase().includes(q));
+  const size = (m) => (m.terrain ? `${Math.round(m.sizeX)} × ${Math.round(m.sizeZ)} m` : tr('no terrain'));
   // a variant without a loading picture of its own ("arena_canyon_dronebattle") shows its map's
   const pics = new Map(all.filter((m) => m.picture).map((m) => [m.name, m.picture]));
   // (its own loading picture, else its map's, else the game's minimap of it: arenas and hangars have no picture)
@@ -2779,7 +2945,7 @@ function renderMapList() {
   $('mapList').innerHTML = list.length ? list.map((m) => `<div class="map-row${m.name === state.map.name ? ' sel' : ''}" data-map="${esc(m.name)}" title="levels/maps/${esc(m.name)}">
     ${picture(m) ? `<img loading="lazy" src="${DATA}/png?base=${enc(picture(m))}&max=160&view=opaque" alt="">` : '<span class="ph"></span>'}
     <div><div class="mn">${esc(mapTitle(m.name))}</div><div class="ms">${size(m)}</div></div></div>`).join('')
-    : `<div class="list-empty">${state.map.list ? (all.length ? 'Nothing matches.' : 'No maps found.') : state.map.listLoading ? 'Loading the maps…' : 'No game data loaded.'}</div>`;
+    : `<div class="list-empty">${state.map.list ? (all.length ? tr('Nothing matches.') : tr('No maps found.')) : state.map.listLoading ? tr('Loading the maps…') : tr('No game data loaded.')}</div>`;
 }
 $('mapList').addEventListener('click', (e) => {
   const r = e.target.closest('[data-map]');
@@ -2812,7 +2978,7 @@ async function openMap(name, { festival = 'Empty', gameplay = 'auto', environmen
     renderMapPanel();
     renderMapSpeed();
     const n = scene.models.reduce((a, m) => a + m.m.length / 12, 0);
-    status(`${mapTitle(name)}: ${n.toLocaleString()} objects of ${scene.models.length} models · W A S D to fly, 1-9 for the speed`);
+    status(tr('{name}: {n} objects of {m} models · W A S D to fly, 1-9 for the speed', { name: mapTitle(name), n: n.toLocaleString(), m: scene.models.length }));
     return scene;
   } catch (e) {
     if (token === mapToken) { status(e.message, true); syncMapView(); renderMapPanel(); }
@@ -2834,7 +3000,7 @@ function renderMapPanel() {
   const s = mapView.stats();
   $('mxExport').disabled = !s || state.mapExporting; // (a second whole-map export ran alongside: gigabytes)
   if (!s) {
-    $('mpName').textContent = state.map.name && mapView.loading ? mapTitle(state.map.name) : 'No map open';
+    $('mpName').textContent = state.map.name && mapView.loading ? mapTitle(state.map.name) : tr('No map open');
     $('mpPath').textContent = '';
     $('mpStats').innerHTML = '';
     $('mpLoad').hidden = true;
@@ -2847,37 +3013,37 @@ function renderMapPanel() {
   }
   $('mpName').textContent = mapTitle(s.name);
   $('mpPath').textContent = `levels/maps/${s.name}`;
-  const row = (k, v, id = '') => `<dt>${k}</dt><dd${id ? ` id="${id}"` : ''}>${v}</dd>`;
-  $('mpStats').innerHTML = (s.size ? row('Size', `${Math.round(s.size[0])} × ${Math.round(s.size[1])} m`) : row('Terrain', 'none')) +
+  const row = (k, v, id = '') => `<dt>${esc(tr(k))}</dt><dd${id ? ` id="${id}"` : ''}>${v}</dd>`;
+  $('mpStats').innerHTML = (s.size ? row('Size', `${Math.round(s.size[0])} × ${Math.round(s.size[1])} m`) : row('Terrain', tr('none'))) +
     row('Objects', s.placed.toLocaleString()) + row('Different models', s.models.toLocaleString()) +
     row('Drawn now', drawnText(), 'mpDrawn') +
-    (s.grass ? row('Grass', `${s.grass.placed.toLocaleString()} (${s.grass.kinds} kinds)`) + row('Grass drawn', grassText(), 'mpGrassDrawn') : '') +
+    (s.grass ? row('Grass', tr('{n} ({k} kinds)', { n: s.grass.placed.toLocaleString(), k: s.grass.kinds })) + row('Grass drawn', grassText(), 'mpGrassDrawn') : '') +
     (s.decals ? row('Decals', s.decals.toLocaleString()) : '') +
-    (s.lights && s.lights.lights + s.lights.flares + s.lights.beams ? row('Lights', [s.lights.lights ? `${s.lights.lights.toLocaleString()} lights` : '', s.lights.flares ? `${s.lights.flares.toLocaleString()} flares` : '', s.lights.beams ? `${s.lights.beams.toLocaleString()} beams` : ''].filter(Boolean).join(' · ')) : '') +
+    (s.lights && s.lights.lights + s.lights.flares + s.lights.beams ? row('Lights', [s.lights.lights ? tr('{n} lights', { n: s.lights.lights.toLocaleString() }) : '', s.lights.flares ? tr('{n} flares', { n: s.lights.flares.toLocaleString() }) : '', s.lights.beams ? tr('{n} beams', { n: s.lights.beams.toLocaleString() }) : ''].filter(Boolean).join(' · ')) : '') +
     (s.environment ? row('Sky', `<span title="${esc(s.environment)}">${esc(weatherLabel({ name: s.environment }, s.name))}</span>`) : '') +
     (s.water ? row('Water areas', s.water) : '') + row('Spawn points', s.spawns) +
-    (s.soundscape || s.sounds ? row('Sounds', esc([s.soundscape ? s.soundscape.split('/').pop().replace(/_/g, ' ') : '', s.sounds ? `${s.sounds} placed` : ''].filter(Boolean).join(' · '))) : '') +
-    (s.effects || s.weatherFx ? row('Effects', esc([s.effects ? `${s.effects.toLocaleString()} placed` : '', weatherName(s.weatherFx)].filter(Boolean).join(' · '))) : '') +
+    (s.soundscape || s.sounds ? row('Sounds', esc([s.soundscape ? s.soundscape.split('/').pop().replace(/_/g, ' ') : '', s.sounds ? tr('{n} placed', { n: s.sounds }) : ''].filter(Boolean).join(' · '))) : '') +
+    (s.effects || s.weatherFx ? row('Effects', esc([s.effects ? tr('{n} placed', { n: s.effects.toLocaleString() }) : '', weatherName(s.weatherFx)].filter(Boolean).join(' · '))) : '') +
     (s.filteredOut ? row('Other modes, festivals', s.filteredOut.toLocaleString()) : '');
   const L = s.loading;
   const busy = L && !L.finished;
   $('mpLoad').hidden = !busy;
   if (busy) {
     const parts = [];
-    if (L.done < L.models) parts.push(`models ${L.done} / ${L.models}`);
-    if (L.terrain) parts.push('terrain');
-    else if (L.ground) parts.push('ground colour');
-    if (L.sky) parts.push('sky');
-    if (L.grass) parts.push('grass');
-    if (L.decals) parts.push('decals');
+    if (L.done < L.models) parts.push(tr('models {done} / {all}', { done: L.done, all: L.models }));
+    if (L.terrain) parts.push(tr('terrain'));
+    else if (L.ground) parts.push(tr('ground colour'));
+    if (L.sky) parts.push(tr('sky'));
+    if (L.grass) parts.push(tr('grass'));
+    if (L.decals) parts.push(tr('decals'));
     const parts5 = ['terrain', 'ground', 'sky', 'grass', 'decals'].filter((k) => !L[k]).length;
     $('mpLoad').querySelector('.progress div').style.width = `${Math.round((L.done + parts5) / (L.models + 5) * 100)}%`;
-    $('mpLoad').querySelector('span').textContent = parts.length ? `Loading ${parts.join(', ')}…` : 'Loading…';
+    $('mpLoad').querySelector('span').textContent = parts.length ? tr('Loading {what}…', { what: parts.join('、') }) : tr('Loading…');
   }
-  $('mpErrors').innerHTML = L?.errors?.length ? `${L.errors.length} problem(s) while loading: ${esc(L.errors[0])}` : '';
+  $('mpErrors').innerHTML = L?.errors?.length ? tr('{n} problem(s) while loading: {first}', { n: L.errors.length, first: esc(L.errors[0]) }) : '';
   const opt = (v, label, sel) => `<option value="${esc(v)}"${v === sel ? ' selected' : ''}>${esc(label)}</option>`;
-  $('mpMode').innerHTML = (s.gameplays.length ? s.gameplays : [s.gameplay || '']).map((g) => opt(g, g ? g.replace(/_/g, ' ') : 'Any', s.gameplay)).join('') + opt('', 'All modes together', s.gameplay);
-  $('mpFestival').innerHTML = opt('Empty', 'None', s.festival) + s.festivals.filter((f) => f !== 'Empty').map((f) => opt(f, f, s.festival)).join('');
+  $('mpMode').innerHTML = (s.gameplays.length ? s.gameplays : [s.gameplay || '']).map((g) => opt(g, modeName(g), s.gameplay)).join('') + opt('', tr('All modes together'), s.gameplay);
+  $('mpFestival').innerHTML = opt('Empty', festivalName('Empty'), s.festival) + s.festivals.filter((f) => f !== 'Empty').map((f) => opt(f, festivalName(f), s.festival)).join('');
   // the weather: every one the map has (the festival's and other modes' marked)
   const weathers = weatherChoices(s.environments, s.name);
   $('mpEnv').innerHTML = weathers.map((w) => `<option value="${esc(w.id)}"${w.id === s.environmentId ? ' selected' : ''} title="${esc(w.name)}">${esc(w.label)}</option>`).join('');
@@ -2904,7 +3070,7 @@ function renderMapPanel() {
     (un.length > 40 ? `<div><span>… and ${un.length - 40} more</span></div>` : '');
 }
 // (rows of their own, each one line: the panel must not shift while flying)
-const drawnText = () => `${mapView.drawn.placements.toLocaleString()} · ${(mapView.drawn.triangles / 1e6).toFixed(1)} M tris`;
+const drawnText = () => `${mapView.drawn.placements.toLocaleString()} · ${tr('{n} M tris', { n: (mapView.drawn.triangles / 1e6).toFixed(1) })}`;
 const grassText = () => (mapView.drawn.grass || 0).toLocaleString();
 
 function renderMapSpeed() {
@@ -2912,15 +3078,15 @@ function renderMapSpeed() {
   if (sp) { // (driving: a speedometer)
     const f = Math.min(1, sp.kmh / Math.max(1, sp.top));
     $('mapSpeed').innerHTML = `<div class="ms-bars">${SPEEDS.map((_, i) => `<i class="${i < Math.round(f * SPEEDS.length) ? 'on' : ''}" style="height:${6 + i * 2}px"></i>`).join('')}</div>` +
-      `<b>${Math.round(sp.kmh)} <small>km/h${sp.reverse ? ' R' : ''}${sp.air ? ' · in the air' : ''}</small></b><span>top speed ${Math.round(sp.top)} km/h</span>` +
-      (sp.pad ? '<span class="ms-keys"><i>left stick drives</i> · <i>right stick looks</i> · <i>A fires</i> · <i>B brakes</i> · <i>Y horn</i> · <i>Back stops</i></span>'
-        : `<span class="ms-keys"><i><kbd>W A S D</kbd> drive</i> · <i><kbd>Space</kbd> brake</i> · <i><kbd>V</kbd> fire</i> · <i><kbd>H</kbd> horn</i> · ${sp.locked ? '<i>mouse aims</i> · <i>left button fires</i> · <i><kbd>Esc</kbd> frees the mouse</i>' : '<i>drag to look</i> · <i>click to aim with the mouse</i> · <i><kbd>Esc</kbd> fly</i>'}</span>`);
+      `<b>${Math.round(sp.kmh)} <small>km/h${sp.reverse ? ' R' : ''}${sp.air ? tr(' · in the air') : ''}</small></b><span>${tr('top speed {v} km/h', { v: Math.round(sp.top) })}</span>` +
+      (sp.pad ? `<span class="ms-keys"><i>${tr('left stick drives')}</i> · <i>${tr('right stick looks')}</i> · <i>${tr('A fires')}</i> · <i>${tr('B brakes')}</i> · <i>${tr('Y horn')}</i> · <i>${tr('Back stops')}</i></span>`
+        : `<span class="ms-keys"><i><kbd>W A S D</kbd> ${tr('drive')}</i> · <i><kbd>Space</kbd> ${tr('brake')}</i> · <i><kbd>V</kbd> ${tr('fire')}</i> · <i><kbd>H</kbd> ${tr('horn')}</i> · ${sp.locked ? `<i>${tr('mouse aims')}</i> · <i>${tr('left button fires')}</i> · <i><kbd>Esc</kbd> ${tr('frees the mouse')}</i>` : `<i>${tr('drag to look')}</i> · <i>${tr('click to aim with the mouse')}</i> · <i><kbd>Esc</kbd> ${tr('fly')}</i>`}</span>`);
     return;
   }
   const l = mapView.fly.level, v = SPEEDS[l];
   $('mapSpeed').innerHTML = `<div class="ms-bars">${SPEEDS.map((_, i) => `<i class="${i <= l ? 'on' : ''}" style="height:${6 + i * 2}px"></i>`).join('')}</div>` +
-    `<b>${v} <small>m/s</small></b><span>${Math.round(v * 3.6)} km/h · speed ${l + 1} of 9</span>` +
-    '<span class="ms-keys"><i><kbd>W A S D</kbd> fly</i> · <i><kbd>Space</kbd> up</i> · <i><kbd>Shift</kbd> down</i> · <i><kbd>1–9</kbd> speed</i> · <i>drag to look</i> · <i>click to select</i></span>'; // (small windows: instead of the key bar)
+    `<b>${v} <small>m/s</small></b><span>${Math.round(v * 3.6)} km/h · ${tr('speed {n} of {max}', { n: l + 1, max: SPEEDS.length })}</span>` +
+    `<span class="ms-keys"><i><kbd>W A S D</kbd> ${tr('fly')}</i> · <i><kbd>Space</kbd> ${tr('up')}</i> · <i><kbd>Shift</kbd> ${tr('down')}</i> · <i><kbd>1–9</kbd> ${tr('speed')}</i> · <i>${tr('drag to look')}</i> · <i>${tr('click to select')}</i></span>`; // (small windows: instead of the key bar)
   if (!$('mapKeys').innerHTML) { $('mapKeys').innerHTML = keysHtml(MAP_CONTROLS); hydrateIcons($('mapKeys')); }
 }
 
@@ -2932,7 +3098,7 @@ viewer.frameHooks.push(() => {
   if (now - mapHudTime < 250) return;
   mapHudTime = now;
   const p = viewer.camera.position, g = mapView.heightAt(p.x, p.z);
-  $('mapPos').textContent = `x ${p.x.toFixed(0)}  z ${(-p.z).toFixed(0)}  height ${p.y.toFixed(0)} m${Number.isFinite(g) ? `\n${(p.y - g).toFixed(1)} m above the ground` : ''}`;
+  $('mapPos').textContent = `x ${p.x.toFixed(0)}  z ${(-p.z).toFixed(0)}  ${tr('height {h} m', { h: p.y.toFixed(0) })}${Number.isFinite(g) ? `\n${tr('{d} m above the ground', { d: (p.y - g).toFixed(1) })}` : ''}`;
   const d = $('mpDrawn'), gd = $('mpGrassDrawn');
   if (d) d.textContent = drawnText();
   if (gd) gd.textContent = grassText();
@@ -3164,6 +3330,14 @@ async function gameCommand(cmd, text) {
 $('gameBtn').addEventListener('click', () => gameCommand('pickGameDir', 'Reading the game archives…'));
 $('gameDialogPick').addEventListener('click', () => gameCommand('pickGameDir', 'Reading the game archives…'));
 $('reloadBtn').addEventListener('click', () => gameCommand('reload', 'Re-reading the game archives…'));
+$('zhNamesBtn').addEventListener('click', async () => {
+  await loadZhNames(); // (the file may have just been edited: read it again, then switch)
+  await loadPaintZh();
+  await loadMapZh();
+  await loadModesZh();
+  setZhNames(!state.settings.zhNames);
+});
+$('langBtn').addEventListener('click', () => setUiLang(getLang() === 'zh' ? 'en' : 'zh'));
 
 // ---- keyboard ----
 // The next openable row from row i in direction dir: { i, path } or null.
@@ -3303,6 +3477,8 @@ document.addEventListener('keydown', (e) => {
 
 // ---- start ----
 (async function start() {
+  setLang(pickLang(null)); // (the system's language for the first paint: the settings are read below)
+  applyStatic(document.body);
   if (!webview) { status('Open this page through Grimcold.exe', true, true); return; }
   const gameBtns = [$('gameBtn'), $('reloadBtn'), $('gameDialogPick')];
   gameBtns.forEach((b) => (b.disabled = true)); // until the startup scan of the game folder is done
@@ -3311,6 +3487,11 @@ document.addEventListener('keydown', (e) => {
     const init = await call('init').finally(() => busy(false));
     gameBtns.forEach((b) => (b.disabled = false));
     state.settings = init.settings || {};
+    // the interface's language: what was chosen before, else the system's (Chinese Windows -> 中文).
+    // The chrome was already drawn in the system's language; this settles it once the settings are in.
+    const bootLang = pickLang(state.settings.uiLang);
+    if (bootLang !== getLang()) { setLang(bootLang); applyStatic(document.body); }
+    syncLangBtn();
     await Promise.all([loadNames(), partStats.load()]);
     if (partStats.source) $('bStatsSource').textContent = `Part stats: ${partStats.source}.`;
     state.test = init.test;
@@ -3336,6 +3517,7 @@ document.addEventListener('keydown', (e) => {
     restoreFolds();
     watchPrefs();
     showGame(init.game);
+    syncZhBtn(); // (the Chinese part names: names.zh.json, off unless turned on)
     if (init.game.ok) { hydrateIcons(document.body); loadSkin(state.gameVer); } // the game's own icons and UI kit (read from its archives)
     if (!viewer.support.s3tc) status('This GPU/driver has no BC texture support in WebView2; textures are decoded on the CPU instead.', false, true);
     if (init.game.ok) {
