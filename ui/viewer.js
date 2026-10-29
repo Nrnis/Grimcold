@@ -1838,7 +1838,7 @@ export class Viewer {
   }
 
   // The pose a part shows by itself in the 3D Viewer: its idle at the start, every aim, steering and
-  // other parameter at 0. The bind pose a model was made in is often another (a mortar's barrel stands
+  // other parameter at 0 (a wheel's spring at the height it was made at: Animator.restSprings). The bind pose a model was made in is often another (a mortar's barrel stands
   // straight up in it, 50 of the 264 moving weapons are more than 1 cm off), so static copies (the
   // builder's parts, their pictures, a build's export) are baked in this one. Resolves to { trs: per
   // node its local translation, rotation and scale (what an export takes), skin: per node the matrix

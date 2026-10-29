@@ -874,7 +874,7 @@ function revealRow(i) {
 // screen, one at a time; kept in the browser's storage between runs (per game version).
 const cardPics = new Map(); // key -> data URL ('' : nothing to picture)
 const PIC = 300; // its size (px, square: drawn at twice that, cut to the part, shrunk to fit it)
-const picKey = (path) => `4|${state.gameVer || ''}|${path}`; // (4: the look matched to the game's cards)
+const picKey = (path) => `5|${state.gameVer || ''}|${path}`; // (4: the look matched to the game's cards; 5: wheels at their height)
 // the picture cut to the part (its clear margins off, a little room left), so it fills the card
 async function trimPic(url) {
   if (!url) return url;

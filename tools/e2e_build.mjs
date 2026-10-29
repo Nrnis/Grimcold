@@ -28,10 +28,11 @@ const count = () => js('window.__xo.build.instances.length');
 const settle = () => waitFor('!window.__xo.build.busy && !window.__xo.build.committing && document.getElementById("busy").hidden', 30000);
 // aim at a world point of an instance's box: fx/fy/fz in 0..1 across the box
 const aimAt = async (id, fx, fy, fz) => js(`(() => { const i = window.__xo.build.get(${id}); const b = i.box; return window.__xo.viewer.project(b.min.x + (b.max.x - b.min.x) * ${fx}, b.min.y + (b.max.y - b.min.y) * ${fy}, b.min.z + (b.max.z - b.min.z) * ${fz}); })()`);
-// a spot on the ground next to the vehicle where the cursor hits no part
+// a spot on the ground next to the vehicle where the cursor hits no part (far enough out that a part
+// held over it lets go of the vehicle: within STICK, 1 m, of its last weld spot it stays on)
 const freeGroundPoint = () => js(`(() => { const b = window.__xo.build.box(), r = document.getElementById('view').getBoundingClientRect(), top = document.getElementById('buildTools').getBoundingClientRect().bottom;
   const cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2;
-  for (const [x, z] of [[b.max.x + 1.2, cz], [b.min.x - 1.2, cz], [cx, b.max.z + 1.2], [cx, b.min.z - 1.2], [b.max.x + 0.8, b.max.z + 0.8]]) {
+  for (const [x, z] of [[b.max.x + 2, cz], [b.min.x - 2, cz], [cx, b.max.z + 2], [cx, b.min.z - 2], [b.max.x + 1.5, b.max.z + 1.5], [b.max.x + 1.2, cz], [b.min.x - 1.2, cz]]) {
     const p = window.__xo.viewer.project(x, 0, z);
     if (p.inFront && p.x > r.left + 30 && p.x < r.right - 30 && p.y > top + 30 && p.y < r.bottom - 70 && !window.__xo.build.instanceAt({ clientX: p.x, clientY: p.y })) return p;
   } return null; })()`);

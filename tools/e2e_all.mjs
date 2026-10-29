@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { ROOT } from './cdp.mjs';
 
-const suites = ['e2e.mjs', 'e2e_build.mjs', 'e2e_builder_tools.mjs', 'e2e_stickers.mjs', 'e2e_lang.mjs', 'e2e_rebuild.mjs', 'e2e_place.mjs', 'e2e_maps.mjs', 'e2e_bigmap.mjs', 'e2e_fixes.mjs', 'e2e_quit.mjs', 'e2e_support.mjs', 'e2e_reports.mjs',
+const suites = ['e2e.mjs', 'e2e_build.mjs', 'e2e_builder_tools.mjs', 'e2e_stickers.mjs', 'e2e_lang.mjs', 'e2e_wheels.mjs', 'e2e_rebuild.mjs', 'e2e_place.mjs', 'e2e_maps.mjs', 'e2e_bigmap.mjs', 'e2e_fixes.mjs', 'e2e_quit.mjs', 'e2e_support.mjs', 'e2e_reports.mjs',
   // (the maps' look: light probes, fog and shadows, terrain, water, materials, grass and trees, lights and decals)
   'e2e_look_ibl.mjs', 'e2e_look_atmos.mjs', 'e2e_look_terrain.mjs', 'e2e_look_water.mjs', 'e2e_look_mats.mjs', 'e2e_look_veg.mjs', 'e2e_look_scene.mjs',
   // (maps' shaders built ahead in the garage)

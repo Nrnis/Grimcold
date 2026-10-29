@@ -240,6 +240,7 @@ export class Animator {
     this.rigCache = new Map(); // active layer -> how the gun aims (aimRig), or null
     this.noTime = false; // apply() leaves the time clips out (while the aim is measured)
     // every parameter starts at 0, the rest pose (straight ahead, level, centred), within its layers' ranges
+    // (a wheel's spring: at the height it was made at, once its clips are in: restSprings)
     this.pose = {};
     const span = {};
     for (const l of this.layers.values()) {
@@ -365,8 +366,45 @@ export class Animator {
     // start on the idle loop when there is one that actually moves something over time
     const idle = this.activities().find((l) => l.activity === 'IDLE' && this.timeClips(l.name).length);
     this.active = idle ? idle.name : null;
+    this.restSprings();
     this.apply();
     this.belts = setupBelts(this.group, this.info, this);
+  }
+
+  // A wheel's spring as the game shows it. Its suspension's 0 is the spring all the way up: the hub up in
+  // the arch (a vehicle 0.17 to 0.59 m lower than in the game) and, on the light wheels' swing arms, the
+  // tyre leant in 8 degrees. The models are made mid-travel (u 0.4 to 0.57), and the game shows them so:
+  // the value whose pose comes nearest the model's own, found on its clip (21 steps, then 21 between the
+  // best one's neighbours). Every copy starts from it: the 3D Viewer, the builder's parts and pictures,
+  // the exports, the test drive's springs. (The Omni and Atom wheels move theirs with TrackSuspension1.)
+  restSprings() {
+    if (!this.skel) return;
+    const wheel = (this.info?.path || '').startsWith('models/constructor/chassis/wheels/');
+    const springs = this.poses().filter((p) => (p.name === 'WheelSuspension' || (wheel && /^TrackSuspension\d+$/.test(p.name))) && p.max > p.min);
+    if (!springs.length) return;
+    const { bones, rest } = this.skel, noTime = this.noTime;
+    this.noTime = true; // (bones only: no clock, belts or projectiles while it measures)
+    const off = (name, v) => {
+      this.pose[name] = v;
+      this.apply();
+      let d = 0;
+      bones.forEach((b, i) => { d += b.position.distanceTo(rest[i].p) + 0.3 * b.quaternion.angleTo(rest[i].q); });
+      return d;
+    };
+    for (const p of springs) {
+      let lo = p.min, hi = p.max, best = this.pose[p.name], least = Infinity;
+      for (let pass = 0; pass < 2; pass++) {
+        const step = (hi - lo) / 20;
+        for (let k = 0; k <= 20; k++) {
+          const v = lo + k * step, d = off(p.name, v);
+          if (d < least - 1e-9) { least = d; best = v; }
+        }
+        lo = Math.max(p.min, best - step);
+        hi = Math.min(p.max, best + step);
+      }
+      this.pose[p.name] = Math.round(best * 1e4) / 1e4;
+    }
+    this.noTime = noTime;
   }
 
   // Layers of a stack that play over time (no pose parameter); cached per stack (no allocation per frame).

@@ -418,7 +418,7 @@ function headlightsOf(body, box) {
 // ---- wheels ----
 // How a wheel's WheelSuspension and WheelSteer move it, measured on the model (its Animator a with its
 // clips loaded, on the group g; M: the part in the vehicle's frame; wheel: the bone its WheelRotation
-// turns): { spring: { name, lo, hi, rest: its value as built (the spring all the way up), down:
+// turns): { spring: { name, lo, hi, rest: its value as built (mid-travel: Animator.restSprings), down:
 // metres the hub goes down a unit, hub: where it is as built (vehicle frame) } or null, steer: {
 // name, lo, hi, per: values a degree, sign: 1 when a higher value turns it left (about +Y) } or null
 // (a moto wheel's WheelSteer leans it: no steering) }.
@@ -750,8 +750,8 @@ export class Drive {
 
   // Its wheels: an animated copy of each that has the game's WheelRotation (only the wheel turns: the
   // still copy spun whole, its arms and shocks with it), in place of the still one; steered and on
-  // its springs (wheelRig): it stands a third of the way down them (the builder shows them all the
-  // way up), so a wheel can rise over a bump and drop into a dip.
+  // its springs (wheelRig): it stands where the builder shows it, mid-travel as the game does, so a
+  // wheel can rise over a bump and drop into a dip.
   async armWheels(car) {
     for (const w of car.wheels) {
       if (!(w.info.layers || []).some((l) => l.pose?.name === 'WheelRotation')) continue;
@@ -777,10 +777,10 @@ export class Drive {
         w.still.visible = false;
         Object.assign(w, { anim: a, copy, roll, rig, ext: rig.spring?.rest ?? 0 });
         if (rig.spring) {
-          // (its contact where its tyre stands with the spring that far out: the vehicle up on it)
-          const S = rig.spring, ride = 0.35 * (S.hi - S.rest);
-          w.ext = S.rest + ride;
-          w.rel.y = S.hub.y - roll.r - ride * S.down - car.pivot.y;
+          // (its contact where its tyre stands as built: the vehicle up on it)
+          const S = rig.spring;
+          w.ext = S.rest;
+          w.rel.y = S.hub.y - roll.r - car.pivot.y;
         }
       } catch {
         if (copy) this.v.disposeModel(copy);

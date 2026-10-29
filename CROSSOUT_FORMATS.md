@@ -645,9 +645,12 @@ jigglebone "cage_1" { ... }   // procedural wobble (not simulated here)
   about a metre a unit, 1.0 to 1.2 by its linkage); 2 have only the rotation (the Ilon wheels,
   `wheel_ilon` and `wheel_ilon_high`: steered whole), 15 none (they spin whole, as before). The poses
   move the real linkage: arms, shafts, shock absorbers (`wheel_r17`: `susp_arm_lower` 60 degrees over
-  its 0.32 m), and the rotation turns `wheel_center` alone. At 0, the pose the builder shows, the
-  spring is all the way up (the hub highest). `ui/drive.js` `wheelRig` measures the hub's travel and
-  the steering's axis on each model.
+  its 0.32 m), and the rotation turns `wheel_center` alone. At 0 the spring is all the way up (the
+  hub highest; on the light wheels' swing arms the tyre leans in 8 degrees). The models are made
+  mid-travel (u 0.4 to 0.57: 0.2 of 0..0.4, 0.268 on `wheel_light`, 0.37 on Bigfoot, 1.05 on the
+  Widget's STAND_UP 0.55..1.6), which is how the game shows them; `ui/anim.js` `restSprings` finds
+  that value on each clip, and every copy starts there. `ui/drive.js` `wheelRig` measures the hub's
+  travel and the steering's axis on each model.
 - Water on maps: `levels/maps/<name>` water areas (an outline and a level); a vehicle in it uses
   the game's `particles/materials/water/wheel_water` (`_slip` skidding), `hover_water`,
   `air_cushion_water`, `propeller_water`, `leg_water` / `leg_landing_water` and `collision_water`
